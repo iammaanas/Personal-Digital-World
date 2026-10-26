@@ -35,6 +35,7 @@ export default function App() {
   const zoomBehaviorRef = useRef<ZoomBehavior<SVGSVGElement, unknown> | null>(null);
   const [selected, setSelected] = useState<Place | null>(null);
   const [introVisible, setIntroVisible] = useState(true);
+  const [introLeaving, setIntroLeaving] = useState(false);
   const [transform, setTransform] = useState<ZoomTransform>(zoomIdentity);
 
   const projection = useMemo<GeoProjection>(
@@ -64,6 +65,11 @@ export default function App() {
       selection.on(".zoom", null);
       zoomBehaviorRef.current = null;
     };
+  }, []);
+
+  const closeIntro = useCallback(() => {
+    setIntroLeaving(true);
+    window.setTimeout(() => setIntroVisible(false), 420);
   }, []);
 
   const reset = useCallback(() => {
@@ -182,14 +188,14 @@ export default function App() {
       </footer>
 
       {introVisible && (
-        <div className="intro-overlay">
+        <div className={`intro-overlay ${introLeaving ? "is-leaving" : ""}`}>
           <div className="intro-content">
             <div className="intro-orbit"><span /><i /><b /></div>
             <p className="intro-kicker">AN EXPERIMENT IN PERSONAL SPACE</p>
             <p className="intro-title">The world is<br /><em>not that far.</em></p>
             <p className="intro-copy">A map to begin with. A world to make your own.</p>
-            <button className="enter-button" onClick={() => setIntroVisible(false)}>ENTER THE MAP <span>↗</span></button>
-            <button className="skip-button" onClick={() => setIntroVisible(false)}>SKIP INTRO</button>
+            <button className="enter-button" onClick={closeIntro}>ENTER THE MAP <span>↗</span></button>
+            <button className="skip-button" onClick={closeIntro}>SKIP INTRO</button>
           </div>
           <span className="intro-index">PDW — 001</span><span className="intro-corner">INTERACTIVE ATLAS / FIRST STUDY</span>
         </div>
