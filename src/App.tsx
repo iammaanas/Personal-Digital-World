@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { geoNaturalEarth1, geoPath, type GeoProjection } from "d3-geo";
 import { zoom, zoomIdentity, type ZoomBehavior, type ZoomTransform } from "d3-zoom";
 import { select } from "d3-selection";
-import "d3-transition";
 import { feature } from "topojson-client";
 import worldData from "world-atlas/countries-110m.json";
 
@@ -97,12 +96,12 @@ export default function App() {
     const next = zoomIdentity
       .translate(W / 2 - point[0] * scale, H / 2 - point[1] * scale)
       .scale(scale);
-    select(svg).transition().duration(650).call(behavior.transform, next);
+    behavior.transform(select(svg), next);
   }, [projection]);
 
   const zoomBy = useCallback((amount: number) => {
     if (svgRef.current && zoomBehaviorRef.current) {
-      select(svgRef.current).transition().duration(220).call(zoomBehaviorRef.current.scaleBy, amount);
+      zoomBehaviorRef.current.scaleBy(select(svgRef.current), amount);
     }
   }, []);
 
