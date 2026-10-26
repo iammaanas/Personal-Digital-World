@@ -80,7 +80,7 @@ export default function App() {
 
   const reset = useCallback(() => {
     if (svgRef.current && zoomBehaviorRef.current) {
-      select(svgRef.current).transition().duration(420).call(zoomBehaviorRef.current.transform, zoomIdentity);
+      zoomBehaviorRef.current.transform(select(svgRef.current), zoomIdentity);
     }
     setSelected(null);
   }, []);
