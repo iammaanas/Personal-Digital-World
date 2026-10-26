@@ -4,9 +4,9 @@ An experimental, map-first interactive world.
 
 ## Prototype 01 — World Map
 
-A focused interactive atlas: full-world map, pan and zoom, sample markers, a minimal location detail panel, and a skippable intro reveal.
+A first interactive atlas with a dark canvas, geographic outlines, pan and zoom, five temporary sample markers, a basic location detail panel, and a skippable intro screen.
 
-### Run locally
+## Run locally
 
 Requirements: Node.js 20 or newer.
 
@@ -15,13 +15,15 @@ npm install
 npm run dev
 ```
 
-Open the local URL Vite prints in the terminal.
+Open the local URL printed by Vite.
+
+To create a production build:
 
 ```bash
 npm run build
 npm run preview
 ```
 
-The current prototype has no persistence, backend, account system, journal, photo archive, or other product section yet. Sample places are temporary.
+This is an early prototype. Sample locations are temporary; persistence, accounts, backend, journal, photo archive, and other product sections are intentionally out of scope.
 
 See [Prototype 01 plan](docs/PROTOTYPE-01.md).
