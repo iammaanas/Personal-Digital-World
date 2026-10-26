@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { geoNaturalEarth1, geoPath, type GeoProjection } from "d3-geo";
+import { geoGraticule, geoNaturalEarth1, geoPath, type GeoProjection } from "d3-geo";
 import { select } from "d3-selection";
 import { geoGraticule } from "d3-geo";
 import "d3-transition";
@@ -45,6 +45,7 @@ export default function App() {
     [],
   );
   const path = useMemo(() => geoPath(projection), [projection]);
+  const graticule = useMemo(() => geoGraticule().step([30, 30])(), []);
   const graticule = useMemo(() => geoGraticule().step([30, 30])(), []);
 
   useEffect(() => {
