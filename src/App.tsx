@@ -19,7 +19,7 @@ export default function App(){
  const [selected,setSelected]=useState<Place|null>(null),[introVisible,setIntroVisible]=useState(true),[transform,setTransform]=useState<ZoomTransform>(zoomIdentity);
  const projection=useMemo<GeoProjection>(()=>geoNaturalEarth1().fitExtent([[22,28],[W-22,H-28]],world as never),[]);
  const path=useMemo(()=>geoPath(projection),[projection]);
- const applyZoom=()=>zoom<SVGSVGElement,unknown>().scaleExtent([1,7]).on("zoom",e=>{if(viewportRef.current)select(viewportRef.current).attr("transform",e.transform.toString());setTransform(e.transform);});
+ const applyZoom=()=>zoom<SVGSVGElement,unknown>().scaleExtent([1,7]).translateExtent([[-W,-H],[W*2,H*2]]).on("zoom",e=>{if(viewportRef.current)select(viewportRef.current).attr("transform",e.transform.toString());setTransform(e.transform);});
  useEffect(()=>{
   const svg=svgRef.current,viewport=viewportRef.current;if(!svg||!viewport)return;
   const behavior=zoom<SVGSVGElement,unknown>().scaleExtent([1,7]).translateExtent([[-W,-H],[W*2,H*2]]).on("zoom",e=>{select(viewport).attr("transform",e.transform.toString());setTransform(e.transform);});
