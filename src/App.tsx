@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { geoGraticule, geoNaturalEarth1, geoPath, type GeoProjection } from "d3-geo";
+import { geoNaturalEarth1, geoPath, type GeoProjection } from "d3-geo";
 import { zoomIdentity, zoom, type ZoomBehavior, type ZoomTransform } from "d3-zoom";
 import { select } from "d3-selection";
 import "d3-transition";
@@ -44,7 +44,6 @@ export default function App() {
     [],
   );
   const path = useMemo(() => geoPath(projection), [projection]);
-  const graticule = useMemo(() => geoGraticule().step([30, 30])(), []);
   const graticule = useMemo(() => geoGraticule().step([30, 30])(), []);
 
   useEffect(() => {
@@ -143,7 +142,14 @@ export default function App() {
             <g className="countries">
               {world.features.map((country, index) => <path key={index} d={path(country as never) ?? ""} className="country-shape" />)}
             </g>
-            <path className="graticule" d={path(graticule) ?? ""} />
+            <g className="graticule">
+              {Array.from({ length: 11 }, (_, index) => -150 + index * 30).map((longitude) => (
+                <path key={`lon-${longitude}`} d={path({ type: "LineString", coordinates: [[longitude, -78], [longitude, 78]] } as never) ?? ""} />
+              ))}
+              {[-60, -30, 0, 30, 60].map((latitude) => (
+                <path key={`lat-${latitude}`} d={path({ type: "LineString", coordinates: [[-180, latitude], [180, latitude]] } as never) ?? ""} />
+              ))}
+            </g>
             {places.map((place) => {
               const point = projection(place.coordinates);
               if (!point) return null;
