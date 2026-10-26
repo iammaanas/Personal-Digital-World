@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { geoNaturalEarth1, geoPath, type GeoProjection } from "d3-geo";
-import { zoomIdentity, zoom, type ZoomBehavior, type ZoomTransform } from "d3-zoom";
+import { zoom, zoomIdentity, type ZoomBehavior, type ZoomTransform } from "d3-zoom";
 import { select } from "d3-selection";
 import "d3-transition";
 import { feature } from "topojson-client";
