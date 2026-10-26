@@ -80,10 +80,24 @@ export default function App() {
 
   const reset = useCallback(() => {
     if (svgRef.current && zoomBehaviorRef.current) {
-      zoomBehaviorRef.current.transform(select(svgRef.current), zoomIdentity);
+      const next = zoomIdentity;
+      const current = zoomBehaviorRef.current;
+      const selection = select(svgRef.current);
+      const start = performance.now();
+      const duration = 360;
+      const animate = (now: number) => {
+        const progress = Math.min(1, (now - start) / duration);
+        const eased = 1 - Math.pow(1 - progress, 3);
+        const currentTransform = zoomIdentity
+          .translate(transform.x * (1 - eased), transform.y * (1 - eased))
+          .scale(transform.k + (1 - transform.k) * eased);
+        current.transform(selection, currentTransform);
+        if (progress < 1) window.requestAnimationFrame(animate);
+      };
+      window.requestAnimationFrame(animate);
     }
     setSelected(null);
-  }, []);
+  }, [transform]);
 
   const goTo = useCallback((place: Place) => {
     setSelected(place);
@@ -96,14 +110,43 @@ export default function App() {
     const next = zoomIdentity
       .translate(W / 2 - point[0] * scale, H / 2 - point[1] * scale)
       .scale(scale);
-    behavior.transform(select(svg), next);
+    const startTransform = transform;
+    const start = performance.now();
+    const duration = 520;
+    const animate = (now: number) => {
+      const progress = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const interpolated = zoomIdentity
+        .translate(startTransform.x + (next.x - startTransform.x) * eased, startTransform.y + (next.y - startTransform.y) * eased)
+        .scale(startTransform.k + (next.k - startTransform.k) * eased);
+      behavior.transform(select(svg), interpolated);
+      if (progress < 1) window.requestAnimationFrame(animate);
+    };
+    window.requestAnimationFrame(animate);
   }, [projection]);
 
   const zoomBy = useCallback((amount: number) => {
-    if (svgRef.current && zoomBehaviorRef.current) {
-      zoomBehaviorRef.current.scaleBy(select(svgRef.current), amount);
-    }
-  }, []);
+    if (!svgRef.current || !zoomBehaviorRef.current) return;
+    const startTransform = transform;
+    const targetScale = Math.max(1, Math.min(7, startTransform.k * amount));
+    const centerX = W / 2, centerY = H / 2;
+    const worldX = (centerX - startTransform.x) / startTransform.k;
+    const worldY = (centerY - startTransform.y) / startTransform.k;
+    const next = zoomIdentity.translate(centerX - worldX * targetScale, centerY - worldY * targetScale).scale(targetScale);
+    const selection = select(svgRef.current);
+    const behavior = zoomBehaviorRef.current;
+    const start = performance.now();
+    const duration = 240;
+    const animate = (now: number) => {
+      const progress = Math.min(1, (now - start) / duration);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      behavior.transform(selection, zoomIdentity
+        .translate(startTransform.x + (next.x - startTransform.x) * eased, startTransform.y + (next.y - startTransform.y) * eased)
+        .scale(startTransform.k + (next.k - startTransform.k) * eased));
+      if (progress < 1) window.requestAnimationFrame(animate);
+    };
+    window.requestAnimationFrame(animate);
+  }, [transform]);
 
   return (
     <main className="world-app">
