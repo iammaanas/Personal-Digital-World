@@ -36,6 +36,7 @@ export default function App() {
   const [selected, setSelected] = useState<Place | null>(null);
   const [introVisible, setIntroVisible] = useState(true);
   const [introLeaving, setIntroLeaving] = useState(false);
+  const introTimer = useRef<number | null>(null);
   const [transform, setTransform] = useState<ZoomTransform>(zoomIdentity);
 
   const projection = useMemo<GeoProjection>(
@@ -68,8 +69,13 @@ export default function App() {
   }, []);
 
   const closeIntro = useCallback(() => {
+    if (introTimer.current !== null) window.clearTimeout(introTimer.current);
     setIntroLeaving(true);
-    window.setTimeout(() => setIntroVisible(false), 420);
+    introTimer.current = window.setTimeout(() => setIntroVisible(false), 420);
+  }, []);
+
+  useEffect(() => () => {
+    if (introTimer.current !== null) window.clearTimeout(introTimer.current);
   }, []);
 
   const reset = useCallback(() => {
