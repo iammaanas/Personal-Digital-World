@@ -1,252 +1,290 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { geoGraticule, geoNaturalEarth1, geoPath, type GeoProjection } from "d3-geo";
-import { zoom, zoomIdentity, type ZoomBehavior, type ZoomTransform } from "d3-zoom";
-import { select } from "d3-selection";
-import { feature } from "topojson-client";
-import worldData from "world-atlas/countries-110m.json";
+import { Suspense, useEffect, useMemo, useRef, useState } from "react";
+import { Canvas, useFrame, useThree } from "@react-three/fiber";
+import { Html, PointerLockControls, Sparkles, Stars, Float } from "@react-three/drei";
+import * as THREE from "three";
+import "./styles.css";
 
-type Place = {
-  id: string;
-  name: string;
-  region: string;
-  coordinates: [number, number];
+type Region = "nexus" | "workshop" | "mind" | "atlas" | "archives";
+type LandmarkData = {
+  id: Exclude<Region, "nexus">;
+  title: string;
   note: string;
+  position: [number, number, number];
+  color: string;
 };
 
-const places: Place[] = [
-  { id: "mumbai", name: "Mumbai", region: "Asia · India", coordinates: [72.8777, 19.076], note: "A starting point on the map." },
-  { id: "thimphu", name: "Thimphu", region: "Asia · Bhutan", coordinates: [89.639, 27.4728], note: "A quiet marker in the Himalayas." },
-  { id: "tokyo", name: "Tokyo", region: "Asia · Japan", coordinates: [139.6917, 35.6895], note: "A test marker for exploring the map." },
-  { id: "berlin", name: "Berlin", region: "Europe · Germany", coordinates: [13.405, 52.52], note: "A test marker across the continent." },
-  { id: "reykjavik", name: "Reykjavík", region: "Europe · Iceland", coordinates: [-21.9426, 64.1466], note: "A northern marker to test long-distance pan." },
+const landmarks: LandmarkData[] = [
+  { id: "workshop", title: "THE WORKSHOP", note: "Projects · experiments · builds", position: [-7, 0, -7], color: "#ff795f" },
+  { id: "mind", title: "THE MIND", note: "Ideas · learning · connections", position: [7, 0, -9], color: "#a98bff" },
+  { id: "atlas", title: "THE ATLAS", note: "A world within the world", position: [-10, 0, 5], color: "#69c9d0" },
+  { id: "archives", title: "THE ARCHIVES", note: "Resources · collections · discoveries", position: [10, 0, 4], color: "#e5bd72" },
 ];
 
-const W = 1200;
-const H = 660;
-const world = feature(
-  worldData as never,
-  (worldData as { objects: { countries: never } }).objects.countries,
-) as unknown as { type: "FeatureCollection"; features: Array<{ type: "Feature"; geometry: never }> };
+const regionInfo: Record<Region, { title: string; label: string; description: string }> = {
+  nexus: { title: "The Nexus", label: "ENTRY POINT / 001", description: "Wander toward a structure. Each landmark opens a different part of your digital world." },
+  workshop: { title: "The Workshop", label: "REGION / 002", description: "Projects, experiments, code, and things still being built." },
+  mind: { title: "The Mind", label: "REGION / 003", description: "Ideas, learning, notes, and unexpected connections." },
+  atlas: { title: "The Atlas", label: "REGION / 004", description: "The world map as one module inside a much larger digital world." },
+  archives: { title: "The Archives", label: "REGION / 005", description: "References, media, resources, and discoveries worth keeping." },
+};
 
-export default function App() {
-  const svgRef = useRef<SVGSVGElement | null>(null);
-  const viewportRef = useRef<SVGGElement | null>(null);
-  const zoomBehaviorRef = useRef<ZoomBehavior<SVGSVGElement, unknown> | null>(null);
-  const [selected, setSelected] = useState<Place | null>(null);
-  const [introVisible, setIntroVisible] = useState(true);
-  const [introLeaving, setIntroLeaving] = useState(false);
-  const introTimer = useRef<number | null>(null);
-  const [transform, setTransform] = useState<ZoomTransform>(zoomIdentity);
-
-  const projection = useMemo<GeoProjection>(
-    () => geoNaturalEarth1().fitExtent([[22, 28], [W - 22, H - 28]], world as never),
-    [],
-  );
-  const path = useMemo(() => geoPath(projection), [projection]);
-  const graticule = useMemo(() => geoGraticule().step([30, 30])(), []);
+function Player() {
+  const { camera } = useThree();
+  const keys = useRef<Record<string, boolean>>({});
+  const forward = useMemo(() => new THREE.Vector3(), []);
+  const right = useMemo(() => new THREE.Vector3(), []);
+  const movement = useMemo(() => new THREE.Vector3(), []);
 
   useEffect(() => {
-    const svg = svgRef.current;
-    const viewport = viewportRef.current;
-    if (!svg || !viewport) return;
-
-    const behavior = zoom<SVGSVGElement, unknown>()
-      .scaleExtent([1, 7])
-      .translateExtent([[-W, -H], [W * 2, H * 2]])
-      .on("zoom", (event) => {
-        select(viewport).attr("transform", event.transform.toString());
-        setTransform(event.transform);
-      });
-
-    zoomBehaviorRef.current = behavior;
-    const selection = select(svg);
-    selection.call(behavior).on("dblclick.zoom", null);
-
+    const onDown = (event: KeyboardEvent) => { keys.current[event.code] = true; };
+    const onUp = (event: KeyboardEvent) => { keys.current[event.code] = false; };
+    const onBlur = () => { keys.current = {}; };
+    camera.position.set(0, 1.7, 8);
+    window.addEventListener("keydown", onDown);
+    window.addEventListener("keyup", onUp);
+    window.addEventListener("blur", onBlur);
     return () => {
-      selection.on(".zoom", null);
-      zoomBehaviorRef.current = null;
+      window.removeEventListener("keydown", onDown);
+      window.removeEventListener("keyup", onUp);
+      window.removeEventListener("blur", onBlur);
     };
-  }, []);
+  }, [camera]);
 
-  const closeIntro = useCallback(() => {
-    if (introTimer.current !== null) window.clearTimeout(introTimer.current);
-    setIntroLeaving(true);
-    introTimer.current = window.setTimeout(() => setIntroVisible(false), 420);
-  }, []);
+  useFrame((_, delta) => {
+    forward.set(0, 0, -1).applyQuaternion(camera.quaternion);
+    forward.y = 0;
+    forward.normalize();
+    right.crossVectors(forward, camera.up).normalize();
+    movement.set(0, 0, 0);
+    if (keys.current.KeyW || keys.current.ArrowUp) movement.add(forward);
+    if (keys.current.KeyS || keys.current.ArrowDown) movement.sub(forward);
+    if (keys.current.KeyD || keys.current.ArrowRight) movement.sub(right);
+    if (keys.current.KeyA || keys.current.ArrowLeft) movement.add(right);
 
-  useEffect(() => () => {
-    if (introTimer.current !== null) window.clearTimeout(introTimer.current);
-  }, []);
-
-  const reset = useCallback(() => {
-    if (svgRef.current && zoomBehaviorRef.current) {
-      const next = zoomIdentity;
-      const current = zoomBehaviorRef.current;
-      const selection = select(svgRef.current);
-      const start = performance.now();
-      const duration = 360;
-      const animate = (now: number) => {
-        const progress = Math.min(1, (now - start) / duration);
-        const eased = 1 - Math.pow(1 - progress, 3);
-        const currentTransform = zoomIdentity
-          .translate(transform.x * (1 - eased), transform.y * (1 - eased))
-          .scale(transform.k + (1 - transform.k) * eased);
-        current.transform(selection, currentTransform);
-        if (progress < 1) window.requestAnimationFrame(animate);
-      };
-      window.requestAnimationFrame(animate);
+    if (movement.lengthSq() > 0) {
+      const fast = keys.current.ShiftLeft || keys.current.ShiftRight;
+      movement.normalize().multiplyScalar((fast ? 8 : 4.5) * Math.min(delta, 0.05));
+      camera.position.add(movement);
+      camera.position.x = THREE.MathUtils.clamp(camera.position.x, -24, 24);
+      camera.position.z = THREE.MathUtils.clamp(camera.position.z, -24, 24);
+      camera.position.y = 1.7;
     }
-    setSelected(null);
-  }, [transform]);
+  });
+  return null;
+}
 
-  const goTo = useCallback((place: Place) => {
-    setSelected(place);
-    const point = projection(place.coordinates);
-    const svg = svgRef.current;
-    const behavior = zoomBehaviorRef.current;
-    if (!point || !svg || !behavior) return;
+function Landmark({ item, onEnter }: { item: LandmarkData; onEnter: (region: Region) => void }) {
+  const [hovered, setHovered] = useState(false);
+  const group = useRef<THREE.Group>(null);
 
-    const scale = 2.6;
-    const next = zoomIdentity
-      .translate(W / 2 - point[0] * scale, H / 2 - point[1] * scale)
-      .scale(scale);
-    const startTransform = transform;
-    const start = performance.now();
-    const duration = 520;
-    const animate = (now: number) => {
-      const progress = Math.min(1, (now - start) / duration);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      const interpolated = zoomIdentity
-        .translate(startTransform.x + (next.x - startTransform.x) * eased, startTransform.y + (next.y - startTransform.y) * eased)
-        .scale(startTransform.k + (next.k - startTransform.k) * eased);
-      behavior.transform(select(svg), interpolated);
-      if (progress < 1) window.requestAnimationFrame(animate);
-    };
-    window.requestAnimationFrame(animate);
-  }, [projection]);
-
-  const zoomBy = useCallback((amount: number) => {
-    if (!svgRef.current || !zoomBehaviorRef.current) return;
-    const startTransform = transform;
-    const targetScale = Math.max(1, Math.min(7, startTransform.k * amount));
-    const centerX = W / 2, centerY = H / 2;
-    const worldX = (centerX - startTransform.x) / startTransform.k;
-    const worldY = (centerY - startTransform.y) / startTransform.k;
-    const next = zoomIdentity.translate(centerX - worldX * targetScale, centerY - worldY * targetScale).scale(targetScale);
-    const selection = select(svgRef.current);
-    const behavior = zoomBehaviorRef.current;
-    const start = performance.now();
-    const duration = 240;
-    const animate = (now: number) => {
-      const progress = Math.min(1, (now - start) / duration);
-      const eased = 1 - Math.pow(1 - progress, 3);
-      behavior.transform(selection, zoomIdentity
-        .translate(startTransform.x + (next.x - startTransform.x) * eased, startTransform.y + (next.y - startTransform.y) * eased)
-        .scale(startTransform.k + (next.k - startTransform.k) * eased));
-      if (progress < 1) window.requestAnimationFrame(animate);
-    };
-    window.requestAnimationFrame(animate);
-  }, [transform]);
+  useFrame(({ clock }) => {
+    if (group.current) group.current.position.y = 0.1 + Math.sin(clock.elapsedTime + item.position[0]) * 0.13;
+  });
 
   return (
-    <main className="world-app">
-      <header className="topbar">
-        <a className="wordmark" href="#" aria-label="Personal Digital World home" onClick={(event) => { event.preventDefault(); reset(); }}>
-          <span className="wordmark-symbol">P<span>·</span>D<span>·</span>W</span>
-          <span className="wordmark-label">PERSONAL DIGITAL WORLD</span>
+    <group
+      ref={group}
+      position={item.position}
+      onPointerOver={(event) => { event.stopPropagation(); setHovered(true); document.body.style.cursor = "pointer"; }}
+      onPointerOut={() => { setHovered(false); document.body.style.cursor = "auto"; }}
+      onClick={(event) => { event.stopPropagation(); onEnter(item.id); }}
+    >
+      <Float speed={1} floatIntensity={0.2} rotationIntensity={0.1}>
+        <mesh position={[0, 1.5, 0]} scale={hovered ? 1.15 : 1}>
+          <dodecahedronGeometry args={[1, 1]} />
+          <meshStandardMaterial color={item.color} emissive={item.color} emissiveIntensity={hovered ? 1.4 : 0.5} wireframe metalness={0.4} />
+        </mesh>
+        <mesh position={[0, 1.5, 0]}>
+          <icosahedronGeometry args={[0.4, 1]} />
+          <meshStandardMaterial color={item.color} emissive={item.color} emissiveIntensity={1} />
+        </mesh>
+      </Float>
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
+        <ringGeometry args={[1.4, 1.48, 48]} />
+        <meshBasicMaterial color={item.color} transparent opacity={hovered ? 0.9 : 0.45} side={THREE.DoubleSide} />
+      </mesh>
+      <Html position={[0, 3, 0]} center distanceFactor={12} style={{ pointerEvents: "none", whiteSpace: "nowrap" }}>
+        <div className={hovered ? "landmark-label active" : "landmark-label"}>
+          <i style={{ background: item.color }} />
+          <b>{item.title}</b>
+          <small>{item.note}</small>
+        </div>
+      </Html>
+    </group>
+  );
+}
+
+function NeuralLines() {
+  const paths = useMemo(() => landmarks.map((item) => {
+    const start = new THREE.Vector3(0, 1.6, -2);
+    const end = new THREE.Vector3(item.position[0], 1, item.position[2]);
+    const middle = start.clone().lerp(end, 0.5);
+    middle.y += 3;
+    return new THREE.QuadraticBezierCurve3(start, middle, end).getPoints(36);
+  }), []);
+
+  return (
+    <>
+      {paths.map((points, index) => (
+        <line key={landmarks[index].id}>
+          <bufferGeometry attach="geometry" onUpdate={(geometry) => geometry.setFromPoints(points)} />
+          <lineBasicMaterial color={landmarks[index].color} transparent opacity={0.42} />
+        </line>
+      ))}
+    </>
+  );
+}
+
+function Scene({ region, onEnter }: { region: Region; onEnter: (region: Region) => void }) {
+  const pillars = useMemo(() => Array.from({ length: 26 }, (_, index) => {
+    const angle = index / 26 * Math.PI * 2;
+    return { x: Math.cos(angle) * (17 + index % 3), z: Math.sin(angle) * (17 + index % 3), height: 2.5 + index % 5 * 1.2 };
+  }), []);
+  const accent = region === "mind" ? "#a98bff" : region === "atlas" ? "#69c9d0" : region === "archives" ? "#e5bd72" : "#ff795f";
+
+  return (
+    <>
+      <color attach="background" args={["#05080c"]} />
+      <fog attach="fog" args={["#05080c", 18, 43]} />
+      <ambientLight intensity={0.7} />
+      <hemisphereLight args={["#b6d5ff", "#10151a", 0.6]} />
+      <pointLight position={[0, 10, 0]} color="#6ed4ce" intensity={28} distance={34} />
+      <pointLight position={[-8, 5, -7]} color="#ff795f" intensity={12} distance={20} />
+      <pointLight position={[8, 5, -9]} color="#a98bff" intensity={12} distance={20} />
+      <Stars radius={80} depth={40} count={1300} factor={3} saturation={0.25} fade speed={0.3} />
+      <Sparkles count={180} scale={[42, 12, 42]} size={1.8} speed={0.2} color="#8edbd5" opacity={0.45} />
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.08, 0]}>
+        <circleGeometry args={[27, 96]} />
+        <meshStandardMaterial color="#0b151a" roughness={0.85} metalness={0.25} />
+      </mesh>
+      <gridHelper args={[54, 54, "#254047", "#14252b"]} position={[0, -0.04, 0]} />
+      {pillars.map((pillar, index) => (
+        <group key={index} position={[pillar.x, pillar.height / 2 - 0.08, pillar.z]}>
+          <mesh>
+            <cylinderGeometry args={[0.18, 0.34, pillar.height, 6]} />
+            <meshStandardMaterial color="#172a30" metalness={0.65} />
+          </mesh>
+          <mesh position={[0, pillar.height / 2 + 0.08, 0]}>
+            <octahedronGeometry args={[0.12]} />
+            <meshStandardMaterial color="#9be5dc" emissive="#4abfb5" emissiveIntensity={1.5} />
+          </mesh>
+        </group>
+      ))}
+      {region === "nexus" ? (
+        <>
+          {landmarks.map((item) => <Landmark key={item.id} item={item} onEnter={onEnter} />)}
+          <NeuralLines />
+        </>
+      ) : (
+        <>
+          <gridHelper args={[38, 38, accent, "#17242b"]} position={[0, -0.02, 0]} />
+          {Array.from({ length: 12 }, (_, index) => {
+            const angle = index / 12 * Math.PI * 2;
+            return (
+              <Float key={index} speed={0.8} floatIntensity={0.35}>
+                <mesh position={[Math.cos(angle) * (5 + index % 3), 1.5 + index % 4 * 0.7, Math.sin(angle) * (5 + index % 3)]}>
+                  <octahedronGeometry args={[0.5 + index % 3 * 0.15, 1]} />
+                  <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.9} wireframe={index % 2 === 0} />
+                </mesh>
+              </Float>
+            );
+          })}
+          <Sparkles count={150} scale={[24, 10, 24]} color={accent} />
+        </>
+      )}
+      <Player />
+      <PointerLockControls selector="#world-lock-target" />
+    </>
+  );
+}
+
+export default function App() {
+  const [region, setRegion] = useState<Region>("nexus");
+  const [help, setHelp] = useState(true);
+  const [locked, setLocked] = useState(false);
+  const [intro, setIntro] = useState(true);
+
+  useEffect(() => {
+    const updateLock = () => setLocked(document.pointerLockElement !== null);
+    document.addEventListener("pointerlockchange", updateLock);
+    return () => document.removeEventListener("pointerlockchange", updateLock);
+  }, []);
+
+  useEffect(() => {
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.code === "KeyE" && region !== "nexus") setRegion("nexus");
+      if (event.code === "KeyH") setHelp((visible) => !visible);
+    };
+    window.addEventListener("keydown", handleKey);
+    return () => window.removeEventListener("keydown", handleKey);
+  }, [region]);
+
+  const startExploration = () => {
+    setIntro(false);
+    document.getElementById("world-lock-target")?.requestPointerLock?.();
+  };
+
+  const enterRegion = (nextRegion: Region) => {
+    setRegion(nextRegion);
+    if (document.pointerLockElement) document.exitPointerLock();
+  };
+
+  const current = regionInfo[region];
+
+  return (
+    <main className="world-shell">
+      <div className="world-canvas" id="world-lock-target" tabIndex={0}>
+        <Canvas camera={{ position: [0, 1.7, 8], fov: 70, near: 0.1, far: 100 }} dpr={[1, 1.5]} gl={{ antialias: true, powerPreference: "high-performance" }}>
+          <Suspense fallback={null}>
+            <Scene region={region} onEnter={enterRegion} />
+          </Suspense>
+        </Canvas>
+      </div>
+      <header className="world-topbar">
+        <a className="world-brand" href="#" onClick={(event) => { event.preventDefault(); setRegion("nexus"); }}>
+          <span className="brand-mark">P<span>·</span>D<span>·</span>W</span>
+          <span className="brand-caption">PERSONAL DIGITAL WORLD</span>
         </a>
-        <div className="topbar-status"><span className="status-dot" /> PROTOTYPE 01 <span className="status-divider">/</span> WORLD MAP</div>
-        <button className="text-button" onClick={reset}>RESET VIEW <span aria-hidden="true">↺</span></button>
+        <div className="region-indicator"><i /> {current.label}</div>
+        <button className="quiet-button" onClick={() => { setRegion("nexus"); setIntro(false); }}>
+          RETURN TO NEXUS <span>↗</span>
+        </button>
       </header>
-
-      <section className="map-stage" aria-label="Interactive world map">
-        <div className="map-heading">
-          <p className="eyebrow">A WORLD, STILL UNFOLDING</p>
-          <h1>Everywhere<span className="title-period">.</span></h1>
-          <p className="map-subtitle">A personal atlas of places, moments, and meaning.</p>
-        </div>
-
-        <svg ref={svgRef} className="world-svg" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Interactive world map. Drag to pan, use controls to zoom, and select a red marker.">
-          <defs>
-            <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse">
-              <path d="M60 0 L0 0 0 60" fill="none" stroke="currentColor" strokeWidth=".55" opacity=".16" />
-            </pattern>
-            <radialGradient id="map-glow"><stop offset="0%" stopColor="#182126" stopOpacity=".72" /><stop offset="100%" stopColor="#08090b" stopOpacity="0" /></radialGradient>
-            <filter id="marker-glow" x="-250%" y="-250%" width="600%" height="600%">
-              <feGaussianBlur stdDeviation="4" result="blur" /><feMerge><feMergeNode in="blur" /><feMergeNode in="SourceGraphic" /></feMerge>
-            </filter>
-          </defs>
-
-          <rect width={W} height={H} fill="url(#grid)" className="map-grid" />
-          <ellipse cx={W / 2} cy={H / 2} rx="500" ry="300" fill="url(#map-glow)" />
-
-          <g ref={viewportRef} className="map-viewport">
-            <g className="countries">
-              {world.features.map((country, index) => <path key={index} d={path(country as never) ?? ""} className="country-shape" />)}
-            </g>
-            <g className="graticule">
-              {Array.from({ length: 11 }, (_, index) => -150 + index * 30).map((longitude) => (
-                <path key={`lon-${longitude}`} d={path({ type: "LineString", coordinates: [[longitude, -78], [longitude, 78]] } as never) ?? ""} />
-              ))}
-              {[-60, -30, 0, 30, 60].map((latitude) => (
-                <path key={`lat-${latitude}`} d={path({ type: "LineString", coordinates: [[-180, latitude], [180, latitude]] } as never) ?? ""} />
-              ))}
-            </g>
-            {places.map((place) => {
-              const point = projection(place.coordinates);
-              if (!point) return null;
-              const active = selected?.id === place.id;
-              return (
-                <g key={place.id} className={`map-marker ${active ? "is-selected" : ""}`} transform={`translate(${point[0]},${point[1]})`} role="button" tabIndex={0} aria-label={`Show ${place.name}`} onClick={() => goTo(place)} onKeyDown={(event) => {
-                  if (event.key === "Enter" || event.key === " ") { event.preventDefault(); goTo(place); }
-                }}>
-                  <circle className="marker-halo" r={active ? 13 : 9} />
-                  <circle className="marker-core" r={active ? 4.2 : 3.2} filter="url(#marker-glow)" />
-                  <text className="marker-label" x="12" y="-11">{place.name.toUpperCase()}</text>
-                </g>
-              );
-            })}
-          </g>
-        </svg>
-
-        <div className="map-coordinates" aria-hidden="true">
-          <span>EARTH / 001</span><span>WORLD ATLAS STUDY</span><span>ZOOM {Math.round(transform.k * 100)}%</span>
-        </div>
-        <div className="map-controls" aria-label="Map controls">
-          <button aria-label="Zoom in" onClick={() => zoomBy(1.35)}>+</button><span className="control-rule" />
-          <button aria-label="Zoom out" onClick={() => zoomBy(1 / 1.35)}>−</button><span className="control-rule" />
-          <button aria-label="Reset map" onClick={reset}>⌂</button>
-        </div>
-        <div className="map-hint"><span className="hint-cross">✳</span> DRAG TO EXPLORE <span className="hint-separator">·</span> SELECT A MARKER</div>
-
-        {selected && (
-          <aside className="place-card" aria-live="polite">
-            <button className="close-card" onClick={() => setSelected(null)} aria-label="Close details">×</button>
-            <p className="eyebrow">LOCATION / {String(places.findIndex((place) => place.id === selected.id) + 1).padStart(2, "0")}</p>
-            <h2>{selected.name}<span>.</span></h2><p className="place-region">{selected.region}</p><div className="card-rule" />
-            <p className="place-note">{selected.note}</p>
-            <p className="place-coords">{Math.abs(selected.coordinates[1]).toFixed(4)}° {selected.coordinates[1] >= 0 ? "N" : "S"} <span>/</span> {Math.abs(selected.coordinates[0]).toFixed(4)}° {selected.coordinates[0] >= 0 ? "E" : "W"}</p>
-          </aside>
-        )}
+      <section className="world-title-block">
+        <p className="micro-label">{current.label}</p>
+        <h1>{current.title}<span>.</span></h1>
+        <p>{current.description}</p>
       </section>
-
-      <footer className="bottombar">
-        <div className="footer-left"><span className="footer-mark">PDW</span><span>MADE TO BE EXPLORED.</span></div>
-        <div className="footer-center"><span className="footer-light" /> {places.length} TEST LOCATIONS <span className="status-divider">/</span> IN DEVELOPMENT</div>
-        <div className="footer-right">DESIGNED FOR CURIOSITY <span>↗</span></div>
-      </footer>
-
-      {introVisible && (
-        <div className={`intro-overlay ${introLeaving ? "is-leaving" : ""}`}>
-          <div className="intro-content">
-            <div className="intro-orbit"><span /><i /><b /></div>
-            <p className="intro-kicker">AN EXPERIMENT IN PERSONAL SPACE</p>
-            <p className="intro-title">The world is<br /><em>not that far.</em></p>
-            <p className="intro-copy">A map to begin with. A world to make your own.</p>
-            <button className="enter-button" onClick={closeIntro}>ENTER THE MAP <span>↗</span></button>
-            <button className="skip-button" onClick={closeIntro}>SKIP INTRO</button>
-          </div>
-          <span className="intro-index">PDW — 001</span><span className="intro-corner">INTERACTIVE ATLAS / FIRST STUDY</span>
+      {region === "nexus" && <div className="world-footnote"><i /> THE WORLD IS A WORK IN PROGRESS</div>}
+      <div className="world-interaction-hint">
+        {region === "nexus" ? <><span className="keycap">WASD</span> MOVE <b>/</b> <span className="keycap">MOUSE</span> LOOK <b>/</b> CLICK A LANDMARK</> : <><span className="keycap">E</span> RETURN TO NEXUS <b>/</b> EXPLORE THIS SPACE</>}
+      </div>
+      <div className="world-utility">
+        <button onClick={() => setHelp((visible) => !visible)} aria-label="Toggle controls help">?</button>
+        <button onClick={() => { setRegion("nexus"); setIntro(false); }} aria-label="Return to Nexus">⌂</button>
+      </div>
+      {help && (
+        <aside className="controls-card">
+          <button className="controls-close" onClick={() => setHelp(false)} aria-label="Close controls">×</button>
+          <p className="micro-label">FIELD NOTES / CONTROLS</p>
+          <div><span className="keycap">W</span><span className="keycap">A</span><span className="keycap">S</span><span className="keycap">D</span><small>Move</small></div>
+          <div><span className="keycap wide">MOUSE</span><small>Look around</small></div>
+          <div><span className="keycap wide">SHIFT</span><small>Move faster</small></div>
+          <div><span className="keycap wide">CLICK</span><small>Enter landmark</small></div>
+          <div><span className="keycap wide">ESC</span><small>Release mouse</small></div>
+          <p className="controls-foot">Press H to toggle these notes.</p>
+        </aside>
+      )}
+      {!locked && !intro && <button className="relock-prompt" onClick={startExploration}>CLICK TO RESUME EXPLORATION <span>↗</span></button>}
+      {intro && (
+        <div className="entry-overlay">
+          <div className="entry-orbit"><span /><i /><b /></div>
+          <p className="micro-label">AN EXPERIMENT IN PERSONAL SPACE</p>
+          <h2>A world of<br /><em>your own.</em></h2>
+          <p className="entry-copy">Not a website to browse. A place to explore.</p>
+          <button className="enter-world-button" onClick={startExploration}>ENTER THE WORLD <span>↗</span></button>
+          <button className="entry-skip" onClick={() => setIntro(false)}>LOOK AROUND FIRST</button>
+          <div className="entry-footer"><span>PROTOTYPE 02</span><span>MOVE WITH INTENTION.</span></div>
         </div>
       )}
     </main>
