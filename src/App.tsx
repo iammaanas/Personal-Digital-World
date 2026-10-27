@@ -1,292 +1,209 @@
-import { Suspense, useEffect, useMemo, useRef, useState } from "react";
-import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { Html, PointerLockControls, Sparkles, Stars, Float } from "@react-three/drei";
-import * as THREE from "three";
+import { useEffect, useState } from "react";
 import "./styles.css";
 
-type Region = "nexus" | "workshop" | "mind" | "atlas" | "archives";
-type LandmarkData = {
-  id: Exclude<Region, "nexus">;
-  title: string;
-  note: string;
-  position: [number, number, number];
-  color: string;
+type Project = {
+  number: string;
+  name: string;
+  type: string;
+  description: string;
+  tags: string[];
+  href: string;
+  visual: string;
 };
 
-const landmarks: LandmarkData[] = [
-  { id: "workshop", title: "THE WORKSHOP", note: "Projects · experiments · builds", position: [-7, 0, -7], color: "#ff795f" },
-  { id: "mind", title: "THE MIND", note: "Ideas · learning · connections", position: [7, 0, -9], color: "#a98bff" },
-  { id: "atlas", title: "THE ATLAS", note: "A world within the world", position: [-10, 0, 5], color: "#69c9d0" },
-  { id: "archives", title: "THE ARCHIVES", note: "Resources · collections · discoveries", position: [10, 0, 4], color: "#e5bd72" },
+const projects: Project[] = [
+  {
+    number: "01",
+    name: "Attendance Tracker",
+    type: "Productivity · Web app",
+    description: "A clearer way to understand class attendance, weekly schedules, and the decisions that affect them.",
+    tags: ["React", "Data", "Utility"],
+    href: "https://iammaanas.github.io/Attendance-tracker/",
+    visual: "attendance",
+  },
+  {
+    number: "02",
+    name: "Breakfree Journeys",
+    type: "Travel · Digital experience",
+    description: "A travel-focused project exploring how planning, places, and storytelling can live together.",
+    tags: ["Travel", "Design", "Web"],
+    href: "https://github.com/iammaanas",
+    visual: "journeys",
+  },
+  {
+    number: "03",
+    name: "LifeReset",
+    type: "Desktop · Experiment",
+    description: "A personal workspace experiment focused on making daily routines and life admin feel more intentional.",
+    tags: ["Python", "Desktop", "Experiment"],
+    href: "https://github.com/iammaanas",
+    visual: "lifereset",
+  },
 ];
 
-const regionInfo: Record<Region, { title: string; label: string; description: string }> = {
-  nexus: { title: "The Nexus", label: "ENTRY POINT / 001", description: "Wander toward a structure. Each landmark opens a different part of your digital world." },
-  workshop: { title: "The Workshop", label: "REGION / 002", description: "Projects, experiments, code, and things still being built." },
-  mind: { title: "The Mind", label: "REGION / 003", description: "Ideas, learning, notes, and unexpected connections." },
-  atlas: { title: "The Atlas", label: "REGION / 004", description: "The world map as one module inside a much larger digital world." },
-  archives: { title: "The Archives", label: "REGION / 005", description: "References, media, resources, and discoveries worth keeping." },
-};
+const destinations = [
+  { id: "workshop", number: "01", title: "The Workshop", kicker: "MADE, TESTED, REFINED", text: "Projects, experiments, code, and ideas that have made it out of the notes app and into the world.", symbol: "↗", tone: "coral" },
+  { id: "mind", number: "02", title: "The Mind", kicker: "THINKING IN PUBLIC", text: "Learning trails, curiosities, useful concepts, and the connections that make separate interests click.", symbol: "✳", tone: "lilac" },
+  { id: "atlas", number: "03", title: "The Atlas", kicker: "PLACES & POSSIBILITY", text: "A home for maps, destinations, field notes, and the urge to understand what lies beyond the familiar.", symbol: "⌖", tone: "teal" },
+  { id: "archives", number: "04", title: "The Archives", kicker: "WORTH KEEPING", text: "References, media, resources, and small discoveries that deserve somewhere better than a forgotten bookmark.", symbol: "▤", tone: "gold" },
+];
 
-function Player() {
-  const { camera } = useThree();
-  const keys = useRef<Record<string, boolean>>({});
-  const forward = useMemo(() => new THREE.Vector3(), []);
-  const right = useMemo(() => new THREE.Vector3(), []);
-  const movement = useMemo(() => new THREE.Vector3(), []);
+function ArrowIcon() {
+  return <span aria-hidden="true" className="arrow-icon">↗</span>;
+}
+
+function App() {
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState("home");
+  const [theme, setTheme] = useState<"dark" | "light">("dark");
 
   useEffect(() => {
-    const onDown = (event: KeyboardEvent) => { keys.current[event.code] = true; };
-    const onUp = (event: KeyboardEvent) => { keys.current[event.code] = false; };
-    const onBlur = () => { keys.current = {}; };
-    camera.position.set(0, 1.7, 8);
-    window.addEventListener("keydown", onDown);
-    window.addEventListener("keyup", onUp);
-    window.addEventListener("blur", onBlur);
-    return () => {
-      window.removeEventListener("keydown", onDown);
-      window.removeEventListener("keyup", onUp);
-      window.removeEventListener("blur", onBlur);
-    };
-  }, [camera]);
-
-  useFrame((_, delta) => {
-    forward.set(0, 0, -1).applyQuaternion(camera.quaternion);
-    forward.y = 0;
-    forward.normalize();
-    right.crossVectors(forward, camera.up).normalize();
-    movement.set(0, 0, 0);
-    if (keys.current.KeyW || keys.current.ArrowUp) movement.add(forward);
-    if (keys.current.KeyS || keys.current.ArrowDown) movement.sub(forward);
-    if (keys.current.KeyD || keys.current.ArrowRight) movement.sub(right);
-    if (keys.current.KeyA || keys.current.ArrowLeft) movement.add(right);
-
-    if (movement.lengthSq() > 0) {
-      const fast = keys.current.ShiftLeft || keys.current.ShiftRight;
-      movement.normalize().multiplyScalar((fast ? 8 : 4.5) * Math.min(delta, 0.05));
-      camera.position.add(movement);
-      camera.position.x = THREE.MathUtils.clamp(camera.position.x, -24, 24);
-      camera.position.z = THREE.MathUtils.clamp(camera.position.z, -24, 24);
-      camera.position.y = 1.7;
-    }
-  });
-  return null;
-}
-
-function Landmark({ item, onEnter }: { item: LandmarkData; onEnter: (region: Region) => void }) {
-  const [hovered, setHovered] = useState(false);
-  const group = useRef<THREE.Group>(null);
-
-  useFrame(({ clock }) => {
-    if (group.current) group.current.position.y = 0.1 + Math.sin(clock.elapsedTime + item.position[0]) * 0.13;
-  });
-
-  return (
-    <group
-      ref={group}
-      position={item.position}
-      onPointerOver={(event) => { event.stopPropagation(); setHovered(true); document.body.style.cursor = "pointer"; }}
-      onPointerOut={() => { setHovered(false); document.body.style.cursor = "auto"; }}
-      onClick={(event) => { event.stopPropagation(); onEnter(item.id); }}
-    >
-      <Float speed={1} floatIntensity={0.2} rotationIntensity={0.1}>
-        <mesh position={[0, 1.5, 0]} scale={hovered ? 1.15 : 1}>
-          <dodecahedronGeometry args={[1, 1]} />
-          <meshStandardMaterial color={item.color} emissive={item.color} emissiveIntensity={hovered ? 1.4 : 0.5} wireframe metalness={0.4} />
-        </mesh>
-        <mesh position={[0, 1.5, 0]}>
-          <icosahedronGeometry args={[0.4, 1]} />
-          <meshStandardMaterial color={item.color} emissive={item.color} emissiveIntensity={1} />
-        </mesh>
-      </Float>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-        <ringGeometry args={[1.4, 1.48, 48]} />
-        <meshBasicMaterial color={item.color} transparent opacity={hovered ? 0.9 : 0.45} side={THREE.DoubleSide} />
-      </mesh>
-      <Html position={[0, 3, 0]} center distanceFactor={12} style={{ pointerEvents: "none", whiteSpace: "nowrap" }}>
-        <div className={hovered ? "landmark-label active" : "landmark-label"}>
-          <i style={{ background: item.color }} />
-          <b>{item.title}</b>
-          <small>{item.note}</small>
-        </div>
-      </Html>
-    </group>
-  );
-}
-
-function NeuralLines() {
-  const paths = useMemo(() => landmarks.map((item) => {
-    const start = new THREE.Vector3(0, 1.6, -2);
-    const end = new THREE.Vector3(item.position[0], 1, item.position[2]);
-    const middle = start.clone().lerp(end, 0.5);
-    middle.y += 3;
-    return new THREE.QuadraticBezierCurve3(start, middle, end).getPoints(36);
-  }), []);
-
-  return (
-    <>
-      {paths.map((points, index) => (
-        <line key={landmarks[index].id}>
-          <bufferGeometry attach="geometry" onUpdate={(geometry) => geometry.setFromPoints(points)} />
-          <lineBasicMaterial color={landmarks[index].color} transparent opacity={0.42} />
-        </line>
-      ))}
-    </>
-  );
-}
-
-function Scene({ region, onEnter }: { region: Region; onEnter: (region: Region) => void }) {
-  const pillars = useMemo(() => Array.from({ length: 26 }, (_, index) => {
-    const angle = index / 26 * Math.PI * 2;
-    return { x: Math.cos(angle) * (17 + index % 3), z: Math.sin(angle) * (17 + index % 3), height: 2.5 + index % 5 * 1.2 };
-  }), []);
-  const accent = region === "mind" ? "#a98bff" : region === "atlas" ? "#69c9d0" : region === "archives" ? "#e5bd72" : "#ff795f";
-
-  return (
-    <>
-      <color attach="background" args={["#05080c"]} />
-      <fog attach="fog" args={["#05080c", 18, 43]} />
-      <ambientLight intensity={0.7} />
-      <hemisphereLight args={["#b6d5ff", "#10151a", 0.6]} />
-      <pointLight position={[0, 10, 0]} color="#6ed4ce" intensity={28} distance={34} />
-      <pointLight position={[-8, 5, -7]} color="#ff795f" intensity={12} distance={20} />
-      <pointLight position={[8, 5, -9]} color="#a98bff" intensity={12} distance={20} />
-      <Stars radius={80} depth={40} count={1300} factor={3} saturation={0.25} fade speed={0.3} />
-      <Sparkles count={180} scale={[42, 12, 42]} size={1.8} speed={0.2} color="#8edbd5" opacity={0.45} />
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.08, 0]}>
-        <circleGeometry args={[27, 96]} />
-        <meshStandardMaterial color="#0b151a" roughness={0.85} metalness={0.25} />
-      </mesh>
-      <gridHelper args={[54, 54, "#254047", "#14252b"]} position={[0, -0.04, 0]} />
-      {pillars.map((pillar, index) => (
-        <group key={index} position={[pillar.x, pillar.height / 2 - 0.08, pillar.z]}>
-          <mesh>
-            <cylinderGeometry args={[0.18, 0.34, pillar.height, 6]} />
-            <meshStandardMaterial color="#172a30" metalness={0.65} />
-          </mesh>
-          <mesh position={[0, pillar.height / 2 + 0.08, 0]}>
-            <octahedronGeometry args={[0.12]} />
-            <meshStandardMaterial color="#9be5dc" emissive="#4abfb5" emissiveIntensity={1.5} />
-          </mesh>
-        </group>
-      ))}
-      {region === "nexus" ? (
-        <>
-          {landmarks.map((item) => <Landmark key={item.id} item={item} onEnter={onEnter} />)}
-          <NeuralLines />
-        </>
-      ) : (
-        <>
-          <gridHelper args={[38, 38, accent, "#17242b"]} position={[0, -0.02, 0]} />
-          {Array.from({ length: 12 }, (_, index) => {
-            const angle = index / 12 * Math.PI * 2;
-            return (
-              <Float key={index} speed={0.8} floatIntensity={0.35}>
-                <mesh position={[Math.cos(angle) * (5 + index % 3), 1.5 + index % 4 * 0.7, Math.sin(angle) * (5 + index % 3)]}>
-                  <octahedronGeometry args={[0.5 + index % 3 * 0.15, 1]} />
-                  <meshStandardMaterial color={accent} emissive={accent} emissiveIntensity={0.9} wireframe={index % 2 === 0} />
-                </mesh>
-              </Float>
-            );
-          })}
-          <Sparkles count={150} scale={[24, 10, 24]} color={accent} />
-        </>
-      )}
-      <Player />
-      <PointerLockControls selector="#world-lock-target" />
-    </>
-  );
-}
-
-export default function App() {
-  const [region, setRegion] = useState<Region>("nexus");
-  const [help, setHelp] = useState(true);
-  const [locked, setLocked] = useState(false);
-  const [intro, setIntro] = useState(true);
-
-  useEffect(() => {
-    const updateLock = () => setLocked(document.pointerLockElement !== null);
-    document.addEventListener("pointerlockchange", updateLock);
-    return () => document.removeEventListener("pointerlockchange", updateLock);
+    const sections = ["home", "about", "workshop", "mind", "atlas", "archives"];
+    const observer = new IntersectionObserver(
+      entries => {
+        const visible = entries
+          .filter(entry => entry.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (visible) setActiveSection(visible.target.id);
+      },
+      { rootMargin: "-25% 0px -55% 0px", threshold: [0, 0.2, 0.5] },
+    );
+    sections.forEach(id => {
+      const element = document.getElementById(id);
+      if (element) observer.observe(element);
+    });
+    return () => observer.disconnect();
   }, []);
 
   useEffect(() => {
-    const handleKey = (event: KeyboardEvent) => {
-      if (event.code === "KeyE" && region !== "nexus") setRegion("nexus");
-      if (event.code === "KeyH") setHelp((visible) => !visible);
-    };
-    window.addEventListener("keydown", handleKey);
-    return () => window.removeEventListener("keydown", handleKey);
-  }, [region]);
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
 
-  const startExploration = () => {
-    setIntro(false);
-    document.getElementById("world-lock-target")?.requestPointerLock?.();
+  const scrollTo = (id: string) => {
+    setMenuOpen(false);
+    document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
-
-  const enterRegion = (nextRegion: Region) => {
-    setRegion(nextRegion);
-    if (document.pointerLockElement) document.exitPointerLock();
-  };
-
-  const current = regionInfo[region];
 
   return (
-    <main className="world-shell">
-      <div className="world-canvas" id="world-lock-target" tabIndex={0}>
-        <Canvas camera={{ position: [0, 1.7, 8], fov: 70, near: 0.1, far: 100 }} dpr={[1, 1.5]} gl={{ antialias: true, powerPreference: "high-performance" }}>
-          <Suspense fallback={null}>
-            <Scene region={region} onEnter={enterRegion} />
-          </Suspense>
-        </Canvas>
-      </div>
-      <header className="world-topbar">
-        <a className="world-brand" href="#" onClick={(event) => { event.preventDefault(); setRegion("nexus"); }}>
-          <span className="brand-mark">P<span>·</span>D<span>·</span>W</span>
-          <span className="brand-caption">PERSONAL DIGITAL WORLD</span>
+    <div className="site-shell">
+      <div className="grain" aria-hidden="true" />
+      <header className="site-header">
+        <a className="wordmark" href="#home" onClick={event => { event.preventDefault(); scrollTo("home"); }}>
+          <span className="wordmark-glyph">P<span>·</span>DW</span>
+          <span className="wordmark-caption">PERSONAL DIGITAL WORLD</span>
         </a>
-        <div className="region-indicator"><i /> {current.label}</div>
-        <button className="quiet-button" onClick={() => { setRegion("nexus"); setIntro(false); }}>
-          RETURN TO NEXUS <span>↗</span>
-        </button>
-      </header>
-      <section className="world-title-block">
-        <p className="micro-label">{current.label}</p>
-        <h1>{current.title}<span>.</span></h1>
-        <p>{current.description}</p>
-      </section>
-      {region === "nexus" && <div className="world-footnote"><i /> THE WORLD IS A WORK IN PROGRESS</div>}
-      <div className="world-interaction-hint">
-        {region === "nexus" ? <><span className="keycap">WASD</span> MOVE <b>/</b> <span className="keycap">MOUSE</span> LOOK <b>/</b> CLICK A LANDMARK</> : <><span className="keycap">E</span> RETURN TO NEXUS <b>/</b> EXPLORE THIS SPACE</>}
-      </div>
-      <div className="world-utility">
-        <button onClick={() => setHelp((visible) => !visible)} aria-label="Toggle controls help">?</button>
-        <button onClick={() => { setRegion("nexus"); setIntro(false); }} aria-label="Return to Nexus">⌂</button>
-      </div>
-      {help && (
-        <aside className="controls-card">
-          <button className="controls-close" onClick={() => setHelp(false)} aria-label="Close controls">×</button>
-          <p className="micro-label">FIELD NOTES / CONTROLS</p>
-          <div><span className="keycap">W</span><span className="keycap">A</span><span className="keycap">S</span><span className="keycap">D</span><small>Move</small></div>
-          <div><span className="keycap wide">MOUSE</span><small>Look around</small></div>
-          <div><span className="keycap wide">SHIFT</span><small>Move faster</small></div>
-          <div><span className="keycap wide">CLICK</span><small>Enter landmark</small></div>
-          <div><span className="keycap wide">ESC</span><small>Release mouse</small></div>
-          <p className="controls-foot">Press H to toggle these notes.</p>
-        </aside>
-      )}
-      {!locked && !intro && <button className="relock-prompt" onClick={startExploration}>CLICK TO RESUME EXPLORATION <span>↗</span></button>}
-      {intro && (
-        <div className="entry-overlay">
-          <div className="entry-orbit"><span /><i /><b /></div>
-          <p className="micro-label">AN EXPERIMENT IN PERSONAL SPACE</p>
-          <h2>A world of<br /><em>your own.</em></h2>
-          <p className="entry-copy">Not a website to browse. A place to explore.</p>
-          <button className="enter-world-button" onClick={startExploration}>ENTER THE WORLD <span>↗</span></button>
-          <button className="entry-skip" onClick={() => setIntro(false)}>LOOK AROUND FIRST</button>
-          <div className="entry-footer"><span>PROTOTYPE 02</span><span>MOVE WITH INTENTION.</span></div>
+        <nav className={menuOpen ? "main-nav open" : "main-nav"} aria-label="Main navigation">
+          {[["about", "About"], ["workshop", "Workshop"], ["mind", "Mind"], ["atlas", "Atlas"], ["archives", "Archives"]].map(([id, label]) => (
+            <a key={id} href={`#${id}`} className={activeSection === id ? "active" : ""} onClick={event => { event.preventDefault(); scrollTo(id); }}>{label}</a>
+          ))}
+        </nav>
+        <div className="header-actions">
+          <button className="theme-toggle" onClick={() => setTheme(current => current === "dark" ? "light" : "dark")} aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"} title="Toggle theme">{theme === "dark" ? "☼" : "◐"}</button>
+          <button className="menu-toggle" onClick={() => setMenuOpen(current => !current)} aria-label={menuOpen ? "Close navigation" : "Open navigation"} aria-expanded={menuOpen}>{menuOpen ? "×" : "☰"}</button>
         </div>
-      )}
-    </main>
+      </header>
+
+      <main>
+        <section className="hero section-wrap" id="home">
+          <div className="hero-copy">
+            <div className="eyebrow"><span className="status-dot" /> A PERSONAL UNIVERSE, UNDER CONSTRUCTION</div>
+            <h1>A place for<br />everything that<br /><em>makes you, you.</em></h1>
+            <p className="hero-description">Projects in progress. Ideas worth following. Places worth finding. A digital world that brings all the loose ends together.</p>
+            <div className="hero-actions">
+              <button className="primary-button" onClick={() => scrollTo("workshop")}>EXPLORE THE WORLD <ArrowIcon /></button>
+              <button className="text-button" onClick={() => scrollTo("about")}>WHAT IS THIS? <span>↓</span></button>
+            </div>
+            <div className="hero-meta"><span>BUILT WITH CURIOSITY</span><span>EST. 2026</span></div>
+          </div>
+          <div className="hero-art" aria-label="Abstract illustration of connected ideas and destinations" role="img">
+            <div className="art-orbit orbit-one" /><div className="art-orbit orbit-two" /><div className="art-orbit orbit-three" />
+            <div className="art-cross cross-one" /><div className="art-cross cross-two" />
+            <div className="art-core"><span>PDW</span><i /></div>
+            <div className="art-node node-workshop"><b>01</b><span>MAKE</span></div>
+            <div className="art-node node-mind"><b>02</b><span>THINK</span></div>
+            <div className="art-node node-atlas"><b>03</b><span>WANDER</span></div>
+            <div className="art-node node-archives"><b>04</b><span>KEEP</span></div>
+            <div className="art-stamp">A DIGITAL<br />FIELD GUIDE<br /><span>VOL. 01</span></div>
+            <svg className="art-lines" viewBox="0 0 600 650" aria-hidden="true"><path d="M300 315 C220 220 140 165 90 180" /><path d="M300 315 C390 210 465 160 500 180" /><path d="M300 315 C205 410 150 485 100 480" /><path d="M300 315 C410 420 470 480 505 470" /></svg>
+            <div className="art-caption">EVERYTHING CONNECTS, EVENTUALLY.</div>
+          </div>
+          <button className="scroll-cue" onClick={() => scrollTo("about")} aria-label="Scroll to introduction"><span /> SCROLL TO EXPLORE <b>↓</b></button>
+        </section>
+
+        <section className="intro-section section-wrap" id="about">
+          <div className="section-index"><span>01 / THE IDEA</span><span>AN OPEN SYSTEM</span></div>
+          <div className="intro-grid">
+            <h2>Not another<br /><em>link in bio.</em></h2>
+            <div className="intro-copy">
+              <p className="lead-copy">Think of this as a home for your digital life — not a folder of links, but a set of places with a reason to exist.</p>
+              <p>Personal Digital World is an evolving collection of projects, ideas, maps, and things worth remembering. It is personal by design and useful by default. The layout is simple: scroll, explore, follow what catches your attention.</p>
+              <button className="inline-link" onClick={() => scrollTo("workshop")}>MEET THE DESTINATIONS <ArrowIcon /></button>
+            </div>
+          </div>
+          <div className="principle-strip"><div><b>01</b><span>MAKE THINGS</span></div><div><b>02</b><span>FOLLOW CURIOSITY</span></div><div><b>03</b><span>GO SOMEWHERE</span></div><div><b>04</b><span>KEEP THE GOOD STUFF</span></div></div>
+        </section>
+
+        <section className="destinations-section section-wrap" id="destinations">
+          <div className="section-index"><span>02 / THE WORLD</span><span>FOUR WAYS IN</span></div>
+          <div className="section-heading-row"><h2>Choose your<br /><em>own rabbit hole.</em></h2><p>Different corners of the same mind.<br />Each one can grow at its own pace.</p></div>
+          <div className="destination-grid">
+            {destinations.map((item, index) => (
+              <button key={item.id} className={`destination-card ${item.tone}`} onClick={() => scrollTo(item.id)}>
+                <div className="destination-top"><span>{item.number} / 04</span><span className="destination-symbol">{item.symbol}</span></div>
+                <div className="destination-art" aria-hidden="true"><span className="destination-art-ring ring-a" /><span className="destination-art-ring ring-b" /><span className="destination-art-shape">{index === 0 ? "✳" : index === 1 ? "◌" : index === 2 ? "⌖" : "▤"}</span></div>
+                <div className="destination-bottom"><span className="eyebrow">{item.kicker}</span><h3>{item.title}</h3><p>{item.text}</p><span className="card-link">EXPLORE SECTION <ArrowIcon /></span></div>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        <section className="workshop-section section-wrap" id="workshop">
+          <div className="section-index"><span>03 / THE WORKSHOP</span><span>SELECTED BUILDS</span></div>
+          <div className="section-heading-row"><h2>Things made<br /><em>real-ish.</em></h2><p>Projects, experiments, side quests.<br />Some finished. Some still figuring it out.</p></div>
+          <div className="project-list">
+            {projects.map(project => (
+              <article className="project-row" key={project.number}>
+                <a className={`project-visual ${project.visual}`} href={project.href} target="_blank" rel="noreferrer" aria-label={`Open ${project.name}`}>
+                  {project.visual === "attendance" ? <div className="mini-calendar"><span /><span /><span /><span /><span /><span /><span /><span /><span /></div> : project.visual === "journeys" ? <div className="mini-landscape"><i /><b /><span /></div> : <div className="mini-reset"><span>01</span><i>↻</i><b>RESET / REFOCUS</b></div>}
+                  <span className="visual-open"><ArrowIcon /></span>
+                </a>
+                <div className="project-content"><span className="project-number">{project.number} — {project.type}</span><h3>{project.name}</h3><p>{project.description}</p><div className="tag-row">{project.tags.map(tag => <span key={tag}>{tag}</span>)}</div></div>
+                <a className="project-open" href={project.href} target="_blank" rel="noreferrer" aria-label={`Open ${project.name}`}><ArrowIcon /></a>
+              </article>
+            ))}
+          </div>
+          <a className="all-projects-link" href="https://github.com/iammaanas" target="_blank" rel="noreferrer">MORE EXPERIMENTS ON GITHUB <ArrowIcon /></a>
+        </section>
+
+        <section className="mind-section section-wrap" id="mind">
+          <div className="section-index"><span>04 / THE MIND</span><span>ALWAYS LEARNING</span></div>
+          <div className="mind-layout">
+            <div className="mind-copy"><p className="eyebrow">A WORK IN PROGRESS, LIKE EVERYTHING ELSE</p><h2>Curiosity is<br />a <em>good habit.</em></h2><p>Some ideas deserve more than a fleeting tab. The Mind is planned as a place for learning trails, notes, concepts, and the connections that show up when you give an interest a little more time.</p><span className="coming-soon"><i /> THE KNOWLEDGE SPACE IS TAKING SHAPE</span></div>
+            <div className="mind-graphic" aria-hidden="true"><div className="mind-ring r1" /><div className="mind-ring r2" /><div className="mind-ring r3" /><span className="mind-label ml1">LEARN</span><span className="mind-label ml2">CONNECT</span><span className="mind-label ml3">QUESTION</span><div className="mind-center">?</div></div>
+          </div>
+        </section>
+
+        <section className="atlas-section section-wrap" id="atlas">
+          <div className="section-index"><span>05 / THE ATLAS</span><span>THE WORLD OUT THERE</span></div>
+          <div className="atlas-layout">
+            <div className="atlas-copy"><p className="eyebrow">PLACES ARE STORIES, TOO</p><h2>Somewhere<br /><em>out there.</em></h2><p>Travel plans, places on the list, field notes, and maps worth opening. The Atlas brings geography into the world without making the whole website about travel.</p><a href="https://github.com/iammaanas" target="_blank" rel="noreferrer" className="inline-link">ATLAS MODULE — IN DEVELOPMENT <ArrowIcon /></a></div>
+            <div className="atlas-art" aria-hidden="true"><div className="map-grid" /><svg viewBox="0 0 600 460"><path d="M70 80 L150 60 L210 100 L195 150 L140 170 L120 225 L70 185 Z" /><path d="M215 190 L260 165 L305 205 L290 270 L250 325 L230 270 Z" /><path d="M320 75 L390 60 L430 100 L485 90 L530 145 L490 195 L440 170 L400 215 L365 170 Z" /><path d="M415 235 L470 220 L515 275 L485 345 L445 370 L415 315 Z" /><path d="M120 300 L160 285 L190 315 L170 350 L120 340 Z" /></svg><div className="map-pin pin-one">THANE <i /></div><div className="map-pin pin-two">SOMEWHERE NEXT <i /></div><span className="atlas-coordinate">19° 11' N / 72° 58' E</span><span className="atlas-note">GO A LITTLE FURTHER.</span></div>
+          </div>
+        </section>
+
+        <section className="archives-section section-wrap" id="archives">
+          <div className="section-index"><span>06 / THE ARCHIVES</span><span>KEEP WHAT MATTERS</span></div>
+          <div className="archives-layout"><div><p className="eyebrow">A PLACE FOR THE GOOD STUFF</p><h2>Not everything<br />needs to <em>disappear.</em></h2><p className="archives-copy">A growing home for saved references, media, tools, and tiny discoveries that are too useful or interesting to lose. This section will become more than bookmarks as the world develops.</p></div><div className="archive-stack"><div className="archive-item"><span>01</span><div><b>REFERENCES</b><small>Things to come back to</small></div><ArrowIcon /></div><div className="archive-item"><span>02</span><div><b>TOOLS & RESOURCES</b><small>Useful finds and workflows</small></div><ArrowIcon /></div><div className="archive-item"><span>03</span><div><b>MEDIA & INSPIRATION</b><small>Things that leave a mark</small></div><ArrowIcon /></div><div className="archive-status"><i /> ARCHIVE INDEX — IN DEVELOPMENT</div></div></div>
+        </section>
+
+        <section className="closing-section section-wrap">
+          <div className="closing-orbit"><span>PDW</span><i /></div><p className="eyebrow">END OF THE PAGE. NOT THE WORLD.</p><h2>Keep exploring.<br /><em>Keep making.</em></h2><button className="primary-button" onClick={() => scrollTo("home")}>BACK TO THE BEGINNING <span>↑</span></button>
+        </section>
+      </main>
+
+      <footer className="site-footer"><a className="footer-mark" href="#home" onClick={event => { event.preventDefault(); scrollTo("home"); }}>P<span>·</span>DW</a><span>PERSONAL DIGITAL WORLD · A LIVING WORK IN PROGRESS</span><a href="https://github.com/iammaanas/Personal-Digital-World" target="_blank" rel="noreferrer">SOURCE CODE <ArrowIcon /></a></footer>
+    </div>
   );
 }
+
+export default App;
