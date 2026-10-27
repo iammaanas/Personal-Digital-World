@@ -1,39 +1,53 @@
 # Personal Digital World
 
-An experimental first-person digital environment: part neural universe, part physical architecture. The world map is one destination inside the larger space, not the homepage's central purpose.
+**A place for everything that makes you, you.**
 
-## Prototype 02 — The Nexus
+Personal Digital World is a scrollable, personal digital environment for projects, ideas, geographical exploration, and resources worth keeping. It combines an editorial website layout with a distinctive atmospheric visual identity, subtle motion, and intuitive navigation.
 
-- First-person mouse look with pointer lock.
-- WASD / arrow-key movement; Shift moves faster.
-- Dark atmosphere, floating neural connections, glowing structures, and four region landmarks.
-- Click a landmark to enter a simple immersive placeholder region.
-- Return to the Nexus using the top-right control, home control, or E while inside a region.
-- Toggle the controls panel with H.
+This fresh direction intentionally replaces the earlier first-person 3D prototype. There is no Three.js scene, pointer lock, WASD movement, or game-style navigation. The site is explored by scrolling and by using the sticky section navigation.
 
-The regions are placeholders, not complete content experiences. The Atlas is intentionally a future module; the previous interactive map implementation is preserved in Git history and can be reintroduced as an Atlas scene.
+## The destinations
+
+- **The Workshop** — projects, experiments, prototypes, and creations.
+- **The Mind** — learning, ideas, notes, and connections. This is a planned knowledge space.
+- **The Atlas** — maps, places, travel notes, and geographical exploration; one module within the larger website.
+- **The Archives** — references, media, resources, and discoveries worth keeping.
+
+## Experience
+
+- Long-form, scrollable layout with section navigation.
+- Responsive desktop and mobile layouts.
+- Dark and light themes.
+- Abstract, CSS/SVG-based visual motifs; no heavy 3D renderer.
+- Reduced-motion preference support.
+- Project links and clear labels for sections still in development.
+
+## Stack
+
+- React + TypeScript
+- Vite
+- CSS, SVG, and browser-native Intersection Observer
+- GitHub Pages with the repository subpath configured in `vite.config.ts`
 
 ## Run locally
 
-Requirements: Node.js 20 or newer.
+Requires Node.js 20 or newer.
 
 ```bash
 npm install
 npm run dev
 ```
 
-Open the local URL printed by Vite. To check a production build:
+Build and preview:
 
 ```bash
 npm run build
 npm run preview
 ```
 
-## Architecture
+## Current status
 
-- `src/App.tsx` — initial world scene, movement, landmarks, and placeholder interiors.
-- `src/styles.css` — overlay UI and responsive presentation.
-- React Three Fiber / Three.js — browser-based 3D scene and interaction.
-- React Three Drei — pointer-lock controls, labels, stars, and particles.
+The overall page layout, navigation, project examples, visual language, theme toggle, and scroll interactions are implemented as the new foundation. The Mind, Atlas, and Archives sections are presentation-ready placeholders for future real content; they are not yet connected to a persistent content management system.
 
-Persistence, content editing, saved discoveries, complete region geometry, audio, proximity-based interaction, and integration of the prior map are future steps.
+Repository: https://github.com/iammaanas/Personal-Digital-World  
+Live site: https://iammaanas.github.io/Personal-Digital-World/
