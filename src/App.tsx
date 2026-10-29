@@ -32,12 +32,12 @@ const projects: Project[] = [
   },
   {
     number: "03",
-    name: "LifeReset",
-    type: "Desktop · Experiment",
-    description: "A personal workspace experiment focused on making daily routines and life admin feel more intentional.",
-    tags: ["Python", "Desktop", "Experiment"],
+    name: "Gecko Biomimicry",
+    type: "Research · Biomimicry",
+    description: "Exploring how gecko feet inspire adhesion technologies, translating a remarkable natural mechanism into ideas for human-designed materials and surfaces.",
+    tags: ["Biomimicry", "Bio-inspired design", "Research"],
     href: "https://github.com/iammaanas",
-    visual: "lifereset",
+    visual: "gecko",
   },
 ];
 
@@ -164,7 +164,7 @@ function App() {
             {projects.map(project => (
               <article className="project-row" key={project.number}>
                 <a className={`project-visual ${project.visual}`} href={project.href} target="_blank" rel="noreferrer" aria-label={`Open ${project.name}`}>
-                  {project.visual === "attendance" ? <div className="mini-calendar"><span /><span /><span /><span /><span /><span /><span /><span /><span /></div> : project.visual === "journeys" ? <div className="mini-landscape"><i /><b /><span /></div> : <div className="mini-reset"><span>01</span><i>↻</i><b>RESET / REFOCUS</b></div>}
+                  {project.visual === "attendance" ? <div className="mini-calendar"><span /><span /><span /><span /><span /><span /><span /><span /><span /></div> : project.visual === "journeys" ? <div className="mini-landscape"><i /><b /><span /></div> : <div className="mini-gecko"><span>BIOMIMICRY / 03</span><i>⌁</i><b>ADHESION<br />INSPIRED BY NATURE</b></div>}
                   <span className="visual-open"><ArrowIcon /></span>
                 </a>
                 <div className="project-content"><span className="project-number">{project.number} — {project.type}</span><h3>{project.name}</h3><p>{project.description}</p><div className="tag-row">{project.tags.map(tag => <span key={tag}>{tag}</span>)}</div></div>
