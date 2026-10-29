@@ -27,7 +27,7 @@ const projects: Project[] = [
     type: "Travel · Digital experience",
     description: "A travel-focused project exploring how planning, places, and storytelling can live together.",
     tags: ["Travel", "Design", "Web"],
-    href: "https://github.com/iammaanas",
+    href: "https://iammaanas.github.io/Breakfree-2.0_Calendar/",
     visual: "journeys",
   },
   {
@@ -36,7 +36,7 @@ const projects: Project[] = [
     type: "Research · Biomimicry",
     description: "Exploring how gecko feet inspire adhesion technologies, translating a remarkable natural mechanism into ideas for human-designed materials and surfaces.",
     tags: ["Biomimicry", "Bio-inspired design", "Research"],
-    href: "https://github.com/iammaanas/gecko-biomimicry",
+    href: "https://iammaanas.github.io/gecko-biomimicry/",
     visual: "gecko",
   },
 ];
