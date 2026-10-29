@@ -36,7 +36,7 @@ const projects: Project[] = [
     type: "Research · Biomimicry",
     description: "Exploring how gecko feet inspire adhesion technologies, translating a remarkable natural mechanism into ideas for human-designed materials and surfaces.",
     tags: ["Biomimicry", "Bio-inspired design", "Research"],
-    href: "https://github.com/iammaanas",
+    href: "https://github.com/iammaanas/gecko-biomimicry",
     visual: "gecko",
   },
 ];
