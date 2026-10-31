@@ -4,6 +4,7 @@ import { zoom, zoomIdentity, type ZoomBehavior, type ZoomTransform } from "d3-zo
 import { select } from "d3-selection";
 import { feature } from "topojson-client";
 import worldData from "world-atlas/countries-110m.json";
+import indiaStatesData from "./data/india-states.topojson";
 import "./AtlasExperience.css";
 
 type Place = {
@@ -43,6 +44,14 @@ const world = feature(
   worldData as never,
   (worldData as unknown as { objects: { countries: never } }).objects.countries,
 ) as unknown as { type: "FeatureCollection"; features: Array<{ type: "Feature"; geometry: never }> };
+
+const indiaStates = feature(
+  indiaStatesData as never,
+  (indiaStatesData as unknown as { objects: { india: never } }).objects.india,
+) as unknown as {
+  type: "FeatureCollection";
+  features: Array<{ type: "Feature"; id?: string; properties?: { name?: string }; geometry: never }>;
+};
 
 export default function AtlasExperience({ onExit, theme, onToggleTheme }: { onExit: () => void; theme: "dark" | "light"; onToggleTheme: () => void }) {
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -180,6 +189,18 @@ export default function AtlasExperience({ onExit, theme, onToggleTheme }: { onEx
               <g className="atlas-countries">
                 {world.features.map((country, index) => <path key={index} d={path(country as never) ?? ""} className="atlas-country-shape" />)}
               </g>
+              <g className={`atlas-state-boundaries ${transform.k >= 2.15 ? "is-visible" : ""}`} aria-label="India state boundaries">
+                {transform.k >= 2.15 && indiaStates.features
+                  .filter(state => state.id !== "-99")
+                  .map((state, index) => (
+                    <path
+                      key={String(state.id ?? index)}
+                      d={path(state as never) ?? ""}
+                      className="atlas-state-boundary"
+                      aria-label={state.properties?.name ?? "State boundary"}
+                    />
+                  ))}
+              </g>
               <g className="atlas-graticule">
                 {Array.from({ length: 11 }, (_, index) => -150 + index * 30).map(longitude => (
                   <path key={`lon-${longitude}`} d={path({ type: "LineString", coordinates: [[longitude, -78], [longitude, 78]] } as never) ?? ""} />
@@ -230,7 +251,7 @@ export default function AtlasExperience({ onExit, theme, onToggleTheme }: { onEx
 
         <footer className="atlas-bottombar">
           <div><b>PDW</b><span>MADE TO BE EXPLORED.</span></div>
-          <div><i /> {places.length} SAMPLE LOCATIONS <em>/</em> ATLAS MODULE</div>
+          <div><i /> {visiblePlaces.length} HOTSPOTS <em>/</em> ATLAS MODULE</div>
           <div>DESIGNED FOR CURIOSITY <b>↗</b></div>
         </footer>
 
