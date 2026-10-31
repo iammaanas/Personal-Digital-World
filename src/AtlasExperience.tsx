@@ -252,7 +252,7 @@ export default function AtlasExperience({ onExit, theme, onToggleTheme }: { onEx
         <footer className="atlas-bottombar">
           <div><b>PDW</b><span>MADE TO BE EXPLORED.</span></div>
           <div><i /> {visiblePlaces.length} HOTSPOTS <em>/</em> ATLAS MODULE</div>
-          <div>DESIGNED FOR CURIOSITY <b>↗</b></div>
+          <div><a className="atlas-data-source" href="https://github.com/srisbalyan/India-Administrative-Maps" target="_blank" rel="noreferrer">INDIA STATE DATA <b>↗</b></a></div>
         </footer>
 
         {introVisible && (
