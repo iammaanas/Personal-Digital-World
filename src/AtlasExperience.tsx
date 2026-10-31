@@ -4,7 +4,7 @@ import { zoom, zoomIdentity, type ZoomBehavior, type ZoomTransform } from "d3-zo
 import { select } from "d3-selection";
 import { feature } from "topojson-client";
 import worldData from "world-atlas/countries-110m.json";
-import indiaStatesData from "./data/india-states.topojson";
+import indiaStatesData from "./data/india-states.json";
 import "./AtlasExperience.css";
 
 type Place = {
