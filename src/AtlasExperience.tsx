@@ -12,6 +12,7 @@ type Place = {
   region: string;
   coordinates: [number, number];
   note: string;
+  minZoom?: number;
 };
 
 const places: Place[] = [
