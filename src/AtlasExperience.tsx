@@ -20,6 +20,20 @@ const places: Place[] = [
   { id: "tokyo", name: "Tokyo", region: "Asia · Japan", coordinates: [139.6917, 35.6895], note: "A test marker for exploring the map." },
   { id: "berlin", name: "Berlin", region: "Europe · Germany", coordinates: [13.405, 52.52], note: "A test marker across the continent." },
   { id: "reykjavik", name: "Reykjavík", region: "Europe · Iceland", coordinates: [-21.9426, 64.1466], note: "A northern marker to test long-distance pan." },
+  { id: "delhi", minZoom: 2.15, name: "Delhi", region: "Asia · India", coordinates: [77.209, 28.6139], note: "India's capital, revealed as you explore closer." },
+  { id: "jaipur", minZoom: 2.15, name: "Jaipur", region: "Asia · India", coordinates: [75.7873, 26.9124], note: "The Pink City of Rajasthan." },
+  { id: "kolkata", minZoom: 2.15, name: "Kolkata", region: "Asia · India", coordinates: [88.3639, 22.5726], note: "A major city in eastern India." },
+  { id: "singapore", minZoom: 2.15, name: "Singapore", region: "Asia · Singapore", coordinates: [103.8198, 1.3521], note: "A city-state at the crossroads of Southeast Asia." },
+  { id: "seoul", minZoom: 2.15, name: "Seoul", region: "Asia · South Korea", coordinates: [126.978, 37.5665], note: "South Korea's capital." },
+  { id: "kyoto", minZoom: 2.15, name: "Kyoto", region: "Asia · Japan", coordinates: [135.7681, 35.0116], note: "A historic city on Japan's main island." },
+  { id: "bangkok", minZoom: 2.15, name: "Bangkok", region: "Asia · Thailand", coordinates: [100.5018, 13.7563], note: "Thailand's lively capital." },
+  { id: "paris", minZoom: 2.15, name: "Paris", region: "Europe · France", coordinates: [2.3522, 48.8566], note: "A city on the banks of the Seine." },
+  { id: "london", minZoom: 2.15, name: "London", region: "Europe · United Kingdom", coordinates: [-0.1276, 51.5072], note: "A global city on the Thames." },
+  { id: "rome", minZoom: 2.15, name: "Rome", region: "Europe · Italy", coordinates: [12.4964, 41.9028], note: "The historic heart of Italy." },
+  { id: "new-york", minZoom: 2.15, name: "New York", region: "North America · USA", coordinates: [-74.006, 40.7128], note: "A city on the Atlantic coast." },
+  { id: "san-francisco", minZoom: 2.15, name: "San Francisco", region: "North America · USA", coordinates: [-122.4194, 37.7749], note: "A city by the Pacific." },
+  { id: "cape-town", minZoom: 2.15, name: "Cape Town", region: "Africa · South Africa", coordinates: [18.4241, -33.9249], note: "A coastal city beneath Table Mountain." },
+  { id: "sydney", minZoom: 2.15, name: "Sydney", region: "Oceania · Australia", coordinates: [151.2093, -33.8688], note: "A harbour city on Australia's east coast." },
 ];
 
 const W = 1200;
@@ -37,7 +51,7 @@ export default function AtlasExperience({ onExit, theme, onToggleTheme }: { onEx
   const [introVisible, setIntroVisible] = useState(true);
   const [introLeaving, setIntroLeaving] = useState(false);
   const introTimer = useRef<number | null>(null);
-  const [transform, setTransform] = useState<ZoomTransform>(zoomIdentity);
+  const [transform, setTransform] = useState<ZoomTransform>(zoomIdentity);\n  const visiblePlaces = useMemo(() => places.filter(place => transform.k >= (place.minZoom ?? 1)), [transform.k]);\n  const headingOpacity = Math.max(0, Math.min(1, 1 - (transform.k - 1) / 0.72));
 
   const projection = useMemo<GeoProjection>(
     () => geoNaturalEarth1().fitExtent([[22, 28], [W - 22, H - 28]], world as never),
@@ -141,7 +155,7 @@ export default function AtlasExperience({ onExit, theme, onToggleTheme }: { onEx
         </header>
 
         <section className="atlas-map-stage" aria-label="Interactive world map">
-          <div className="atlas-map-heading">
+          <div className="atlas-map-heading" style={{ opacity: headingOpacity, transform: `translateY(${-12 * (1 - headingOpacity)}px)`, visibility: headingOpacity < 0.02 ? "hidden" : "visible" }}>
             <p className="atlas-eyebrow">A PERSONAL ATLAS</p>
             <h1>Everywhere<span>.</span></h1>
             <p className="atlas-map-subtitle">A world of places, moments, and meaning.</p>
@@ -171,12 +185,12 @@ export default function AtlasExperience({ onExit, theme, onToggleTheme }: { onEx
                   <path key={`lat-${latitude}`} d={path({ type: "LineString", coordinates: [[-180, latitude], [180, latitude]] } as never) ?? ""} />
                 ))}
               </g>
-              {places.map(place => {
+              {visiblePlaces.map(place => {
                 const point = projection(place.coordinates);
                 if (!point) return null;
                 const active = selected?.id === place.id;
                 return (
-                  <g key={place.id} className={`atlas-map-marker ${active ? "is-selected" : ""}`} transform={`translate(${point[0]},${point[1]})`} role="button" tabIndex={0} aria-label={`Show ${place.name}`} onClick={() => goTo(place)} onKeyDown={event => {
+                  <g key={place.id} className={`atlas-map-marker ${active ? "is-selected" : ""}`} transform={`translate(${point[0]},${point[1]}) scale(${1 / transform.k})`} role="button" tabIndex={0} aria-label={`Show ${place.name}`} onClick={() => goTo(place)} onKeyDown={event => {
                     if (event.key === "Enter" || event.key === " ") { event.preventDefault(); goTo(place); }
                   }}>
                     <circle className="atlas-marker-halo" r={active ? 13 : 9} />
