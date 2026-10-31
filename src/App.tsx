@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import AtlasExperience from "./AtlasExperience";
 import "./styles.css";
 
 type Project = {
@@ -56,6 +57,7 @@ function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("home");
   const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [atlasOpen, setAtlasOpen] = useState(false);
 
   useEffect(() => {
     const sections = ["home", "about", "workshop", "mind", "atlas", "archives"];
@@ -79,6 +81,11 @@ function App() {
     document.documentElement.dataset.theme = theme;
   }, [theme]);
 
+  const openAtlas = () => {
+    setMenuOpen(false);
+    setAtlasOpen(true);
+  };
+
   const scrollTo = (id: string) => {
     setMenuOpen(false);
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -94,7 +101,7 @@ function App() {
         </a>
         <nav className={menuOpen ? "main-nav open" : "main-nav"} aria-label="Main navigation">
           {[["about", "About"], ["workshop", "Workshop"], ["mind", "Mind"], ["atlas", "Atlas"], ["archives", "Archives"]].map(([id, label]) => (
-            <a key={id} href={`#${id}`} className={activeSection === id ? "active" : ""} onClick={event => { event.preventDefault(); scrollTo(id); }}>{label}</a>
+            <a key={id} href={`#${id}`} className={activeSection === id ? "active" : ""} onClick={event => { event.preventDefault(); id === "atlas" ? openAtlas() : scrollTo(id); }}>{label}</a>
           ))}
         </nav>
         <div className="header-actions">
@@ -148,7 +155,7 @@ function App() {
           <div className="section-heading-row"><h2>Choose your<br /><em>own rabbit hole.</em></h2><p>Different corners of the same mind.<br />Each one can grow at its own pace.</p></div>
           <div className="destination-grid">
             {destinations.map((item, index) => (
-              <button key={item.id} className={`destination-card ${item.tone}`} onClick={() => scrollTo(item.id)}>
+              <button key={item.id} className={`destination-card ${item.tone}`} onClick={() => item.id === "atlas" ? openAtlas() : scrollTo(item.id)}>
                 <div className="destination-top"><span>{item.number} / 04</span><span className="destination-symbol">{item.symbol}</span></div>
                 <div className="destination-art" aria-hidden="true"><span className="destination-art-ring ring-a" /><span className="destination-art-ring ring-b" /><span className="destination-art-shape">{index === 0 ? "✳" : index === 1 ? "◌" : index === 2 ? "⌖" : "▤"}</span></div>
                 <div className="destination-bottom"><span className="eyebrow">{item.kicker}</span><h3>{item.title}</h3><p>{item.text}</p><span className="card-link">EXPLORE SECTION <ArrowIcon /></span></div>
@@ -186,7 +193,7 @@ function App() {
         <section className="atlas-section section-wrap" id="atlas">
           <div className="section-index"><span>05 / THE ATLAS</span><span>THE WORLD OUT THERE</span></div>
           <div className="atlas-layout">
-            <div className="atlas-copy"><p className="eyebrow">PLACES ARE STORIES, TOO</p><h2>Somewhere<br /><em>out there.</em></h2><p>Travel plans, places on the list, field notes, and maps worth opening. The Atlas brings geography into the world without making the whole website about travel.</p><a href="https://github.com/iammaanas" target="_blank" rel="noreferrer" className="inline-link">ATLAS MODULE — IN DEVELOPMENT <ArrowIcon /></a></div>
+            <div className="atlas-copy"><p className="eyebrow">PLACES ARE STORIES, TOO</p><h2>Somewhere<br /><em>out there.</em></h2><p>Travel plans, places on the list, field notes, and maps worth opening. The Atlas brings geography into the world without making the whole website about travel.</p><button type="button" onClick={openAtlas} className="inline-link">OPEN THE ATLAS <ArrowIcon /></button></div>
             <div className="atlas-art" aria-hidden="true"><div className="map-grid" /><svg viewBox="0 0 600 460"><path d="M70 80 L150 60 L210 100 L195 150 L140 170 L120 225 L70 185 Z" /><path d="M215 190 L260 165 L305 205 L290 270 L250 325 L230 270 Z" /><path d="M320 75 L390 60 L430 100 L485 90 L530 145 L490 195 L440 170 L400 215 L365 170 Z" /><path d="M415 235 L470 220 L515 275 L485 345 L445 370 L415 315 Z" /><path d="M120 300 L160 285 L190 315 L170 350 L120 340 Z" /></svg><div className="map-pin pin-one">THANE <i /></div><div className="map-pin pin-two">SOMEWHERE NEXT <i /></div><span className="atlas-coordinate">19° 11' N / 72° 58' E</span><span className="atlas-note">GO A LITTLE FURTHER.</span></div>
           </div>
         </section>
@@ -200,6 +207,8 @@ function App() {
           <div className="closing-orbit"><span>PDW</span><i /></div><p className="eyebrow">END OF THE PAGE. NOT THE WORLD.</p><h2>Keep exploring.<br /><em>Keep making.</em></h2><button className="primary-button" onClick={() => scrollTo("home")}>BACK TO THE BEGINNING <span>↑</span></button>
         </section>
       </main>
+
+      {atlasOpen && <AtlasExperience onExit={() => setAtlasOpen(false)} />}
 
       <footer className="site-footer"><a className="footer-mark" href="#home" onClick={event => { event.preventDefault(); scrollTo("home"); }}>P<span>·</span>DW</a><span>PERSONAL DIGITAL WORLD · A LIVING WORK IN PROGRESS</span><a href="https://github.com/iammaanas/Personal-Digital-World" target="_blank" rel="noreferrer">SOURCE CODE <ArrowIcon /></a></footer>
     </div>
