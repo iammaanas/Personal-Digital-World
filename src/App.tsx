@@ -208,7 +208,7 @@ function App() {
         </section>
       </main>
 
-      {atlasOpen && <AtlasExperience onExit={() => setAtlasOpen(false)} />}
+      {atlasOpen && <AtlasExperience onExit={() => setAtlasOpen(false)} theme={theme} onToggleTheme={() => setTheme(current => current === "dark" ? "light" : "dark")} />}
 
       <footer className="site-footer"><a className="footer-mark" href="#home" onClick={event => { event.preventDefault(); scrollTo("home"); }}>P<span>·</span>DW</a><span>PERSONAL DIGITAL WORLD · A LIVING WORK IN PROGRESS</span><a href="https://github.com/iammaanas/Personal-Digital-World" target="_blank" rel="noreferrer">SOURCE CODE <ArrowIcon /></a></footer>
     </div>
