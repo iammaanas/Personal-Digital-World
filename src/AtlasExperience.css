@@ -80,3 +80,12 @@
 .atlas-map-marker:nth-child(2n) .atlas-marker-halo{animation-delay:1.1s}
 .atlas-map-marker:nth-child(3n) .atlas-marker-halo{animation-delay:2.1s}
 @keyframes atlas-hotspot-pulse{0%,100%{opacity:.12}50%{opacity:.3}}
+
+
+/* India ADM1 boundaries: revealed progressively once the map is zoomed in. */
+.atlas-state-boundaries{opacity:0;transition:opacity .35s ease;pointer-events:none}
+.atlas-state-boundaries.is-visible{opacity:1}
+.atlas-state-boundary{fill:none;stroke:#A6D8C7;stroke-width:1.05;stroke-opacity:.8;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.atlas-experience[data-theme="light"] .atlas-state-boundary{stroke:#536B60;stroke-width:1.1;stroke-opacity:.78}
+.atlas-data-source{color:inherit;text-decoration:none;opacity:.75;transition:opacity .2s}
+.atlas-data-source:hover{opacity:1;color:#E98269}
