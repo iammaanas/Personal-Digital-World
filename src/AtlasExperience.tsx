@@ -29,7 +29,7 @@ const world = feature(
   (worldData as unknown as { objects: { countries: never } }).objects.countries,
 ) as unknown as { type: "FeatureCollection"; features: Array<{ type: "Feature"; geometry: never }> };
 
-export default function AtlasExperience({ onExit }: { onExit: () => void }) {
+export default function AtlasExperience({ onExit, theme, onToggleTheme }: { onExit: () => void; theme: "dark" | "light"; onToggleTheme: () => void }) {
   const svgRef = useRef<SVGSVGElement | null>(null);
   const viewportRef = useRef<SVGGElement | null>(null);
   const zoomBehaviorRef = useRef<ZoomBehavior<SVGSVGElement, unknown> | null>(null);
@@ -129,7 +129,7 @@ export default function AtlasExperience({ onExit }: { onExit: () => void }) {
   }, []);
 
   return (
-    <div className="atlas-experience">
+    <div className="atlas-experience" data-theme={theme}>
       <main className="atlas-world-app">
         <header className="atlas-topbar">
           <div className="atlas-brand">
@@ -137,7 +137,7 @@ export default function AtlasExperience({ onExit }: { onExit: () => void }) {
             <span className="atlas-brand-label">PERSONAL DIGITAL WORLD <i>/</i> ATLAS</span>
           </div>
           <div className="atlas-topbar-status"><span className="atlas-status-dot" /> A WORLD, STILL UNFOLDING</div>
-          <button className="atlas-exit-button" onClick={onExit}><span aria-hidden="true">←</span> BACK TO PDW</button>
+          <div className="atlas-header-actions"><button className="atlas-theme-button" onClick={onToggleTheme} aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"} title="Toggle theme">{theme === "dark" ? "☼" : "◐"}</button><button className="atlas-exit-button" onClick={onExit}><span aria-hidden="true">←</span> BACK TO PDW</button></div>
         </header>
 
         <section className="atlas-map-stage" aria-label="Interactive world map">
