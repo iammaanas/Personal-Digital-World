@@ -26,7 +26,7 @@ const W = 1200;
 const H = 660;
 const world = feature(
   worldData as never,
-  (worldData as { objects: { countries: never } }).objects.countries,
+  (worldData as unknown as { objects: { countries: never } }).objects.countries,
 ) as unknown as { type: "FeatureCollection"; features: Array<{ type: "Feature"; geometry: never }> };
 
 export default function AtlasExperience({ onExit }: { onExit: () => void }) {
