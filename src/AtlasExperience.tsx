@@ -51,7 +51,9 @@ export default function AtlasExperience({ onExit, theme, onToggleTheme }: { onEx
   const [introVisible, setIntroVisible] = useState(true);
   const [introLeaving, setIntroLeaving] = useState(false);
   const introTimer = useRef<number | null>(null);
-  const [transform, setTransform] = useState<ZoomTransform>(zoomIdentity);\n  const visiblePlaces = useMemo(() => places.filter(place => transform.k >= (place.minZoom ?? 1)), [transform.k]);\n  const headingOpacity = Math.max(0, Math.min(1, 1 - (transform.k - 1) / 0.72));
+  const [transform, setTransform] = useState<ZoomTransform>(zoomIdentity);
+  const visiblePlaces = useMemo(() => places.filter(place => transform.k >= (place.minZoom ?? 1)), [transform.k]);
+  const headingOpacity = Math.max(0, Math.min(1, 1 - (transform.k - 1) / 0.72));
 
   const projection = useMemo<GeoProjection>(
     () => geoNaturalEarth1().fitExtent([[22, 28], [W - 22, H - 28]], world as never),
