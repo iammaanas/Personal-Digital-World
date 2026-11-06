@@ -263,7 +263,6 @@ export default function AtlasExperience({ onExit, theme, onToggleTheme }: { onEx
               <p className="atlas-intro-title">The world is<br /><em>not that far.</em></p>
               <p className="atlas-intro-copy">A map to begin with. A world to make your own.</p>
               <button className="atlas-enter-button" onClick={closeIntro}>ENTER THE ATLAS <span>↗</span></button>
-              <button className="atlas-skip-button" onClick={closeIntro}>SKIP INTRO</button>
             </div>
             <span className="atlas-intro-index">PDW — ATLAS / 001</span>
             <span className="atlas-intro-corner">INTERACTIVE ATLAS / FIRST STUDY</span>
