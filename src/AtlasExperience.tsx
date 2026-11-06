@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { geoNaturalEarth1, geoPath, type GeoProjection } from "d3-geo";
 import { zoom, zoomIdentity, type ZoomBehavior, type ZoomTransform } from "d3-zoom";
 import { select } from "d3-selection";
-import { feature } from "topojson-client";
+import { feature, mesh } from "topojson-client";
 import worldData from "world-atlas/countries-110m.json";
 import indiaStatesData from "./data/india-states.json";
 import "./AtlasExperience.css";
@@ -45,13 +45,17 @@ const world = feature(
   (worldData as unknown as { objects: { countries: never } }).objects.countries,
 ) as unknown as { type: "FeatureCollection"; features: Array<{ type: "Feature"; geometry: never }> };
 
-const indiaStates = feature(
-  indiaStatesData as never,
-  (indiaStatesData as unknown as { objects: { india: never } }).objects.india,
-) as unknown as {
-  type: "FeatureCollection";
-  features: Array<{ type: "Feature"; id?: string; properties?: { name?: string }; geometry: never }>;
+type IndiaTopology = {
+  type: "Topology";
+  objects: { india: { type: string; geometries?: Array<{ id?: string | number; properties?: Record<string, unknown> }> } };
 };
+
+const indiaObject = (indiaStatesData as unknown as IndiaTopology).objects.india;
+const indiaInternalBoundaries = mesh(
+  indiaStatesData as never,
+  indiaObject as never,
+  (a, b) => a !== b,
+);
 
 export default function AtlasExperience({ onExit, theme, onToggleTheme }: { onExit: () => void; theme: "dark" | "light"; onToggleTheme: () => void }) {
   const svgRef = useRef<SVGSVGElement | null>(null);
@@ -189,17 +193,10 @@ export default function AtlasExperience({ onExit, theme, onToggleTheme }: { onEx
               <g className="atlas-countries">
                 {world.features.map((country, index) => <path key={index} d={path(country as never) ?? ""} className="atlas-country-shape" />)}
               </g>
-              <g className={`atlas-state-boundaries ${transform.k >= 2.15 ? "is-visible" : ""}`} aria-label="India state boundaries">
-                {transform.k >= 2.15 && indiaStates.features
-                  .filter(state => state.id !== "-99")
-                  .map((state, index) => (
-                    <path
-                      key={String(state.id ?? index)}
-                      d={path(state as never) ?? ""}
-                      className="atlas-state-boundary"
-                      aria-label={state.properties?.name ?? "State boundary"}
-                    />
-                  ))}
+              <g className={`atlas-admin-boundaries ${transform.k >= 2.15 ? "is-visible" : ""}`} aria-label="India state boundaries">
+                {transform.k >= 2.15 && (
+                  <path d={path(indiaInternalBoundaries as never) ?? ""} className="atlas-admin-boundary" />
+                )}
               </g>
               <g className="atlas-graticule">
                 {Array.from({ length: 11 }, (_, index) => -150 + index * 30).map(longitude => (
@@ -252,7 +249,7 @@ export default function AtlasExperience({ onExit, theme, onToggleTheme }: { onEx
         <footer className="atlas-bottombar">
           <div><b>PDW</b><span>MADE TO BE EXPLORED.</span></div>
           <div><i /> {visiblePlaces.length} HOTSPOTS <em>/</em> ATLAS MODULE</div>
-          <div><a className="atlas-data-source" href="https://github.com/srisbalyan/India-Administrative-Maps" target="_blank" rel="noreferrer">INDIA STATE DATA <b>↗</b></a></div>
+          <div><a className="atlas-data-source" href="https://www.geoboundaries.org/" target="_blank" rel="noreferrer">INDIA ADM1 DATA · GEOBOUNDARIES <b>↗</b></a></div>
         </footer>
 
         {introVisible && (
