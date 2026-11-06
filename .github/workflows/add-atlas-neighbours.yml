@@ -1,0 +1,46 @@
+name: Add neighbouring Atlas ADM1 boundaries
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  add-neighbour-boundaries:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout main
+        uses: actions/checkout@v4
+        with:
+          ref: main
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install boundary conversion tools
+        run: npm install --no-save topojson-server@^3.0.1 topojson-client@^3.1.0
+      - name: Generate neighbouring countries
+        run: node scripts/add-atlas-countries.mjs PAK CHN NPL BTN BGD MMR
+      - name: Validate generated datasets
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs/promises';
+          const codes = ['PAK','CHN','NPL','BTN','BGD','MMR'];
+          for (const code of codes) {
+            const topo = JSON.parse(await fs.readFile(`src/data/boundaries/${code}.topojson`, 'utf8'));
+            const meta = JSON.parse(await fs.readFile(`src/data/boundaries/${code}.meta.json`, 'utf8'));
+            if (topo.type !== 'Topology' || !topo.objects?.[code] || !Array.isArray(topo.arcs) || !meta.country || meta.iso3 !== code || meta.adminUnits < 2) {
+              throw new Error(`Invalid generated ADM1 data: ${code}`);
+            }
+            console.log(`${code}: ${meta.country} — ${meta.adminUnits} ADM1 features`);
+          }
+          NODE
+      - name: Commit country geometry and provenance
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/data/boundaries/
+          git diff --cached --quiet && { echo "No changes to commit"; exit 0; }
+          git commit -m "Add neighbouring countries ADM1 boundary datasets"
+          git push origin HEAD:main
