@@ -28,10 +28,8 @@ jobs:
           node-version: 20
 
       - name: Install dependencies
-        run: npm install
+        run: npm ci
 
-      - name: Add generated country boundaries to deployment data
-        run: test -d src/data/boundaries || mkdir -p src/data/boundaries
 
       - name: Type-check and build Vite app
         run: npm run build
