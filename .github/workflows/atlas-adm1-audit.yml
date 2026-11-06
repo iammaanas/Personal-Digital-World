@@ -1,0 +1,114 @@
+name: Atlas ADM1 data audit
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "17 4 1 */3 *"
+
+permissions:
+  contents: read
+
+jobs:
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - name: Query geoBoundaries full-resolution ADM1 catalogue
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p atlas-audit
+          curl --fail --location --retry 3 --retry-delay 2 \
+            "https://www.geoboundaries.org/api/current/gbOpen/ALL/ADM1/" \
+            --output atlas-audit/catalogue.json
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+
+          const raw = JSON.parse(fs.readFileSync('atlas-audit/catalogue.json', 'utf8'));
+          const records = Array.isArray(raw) ? raw : Array.isArray(raw.data) ? raw.data : [raw];
+          const usable = records.filter((r) =>
+            r && /ADM1/i.test(r.boundaryType || '') && (r.tjDownloadURL || r.gjDownloadURL)
+          );
+
+          if (!usable.length) {
+            console.error('No ADM1 records found. Catalogue keys:', Object.keys(raw || {}));
+            process.exit(1);
+          }
+
+          const iso3Of = (r) => r.boundaryISO || r.boundaryID?.split('-')[1] || 'UNK';
+          const unique = [...new Map(usable.map((r) => [iso3Of(r), r])).values()];
+          const results = await Promise.all(unique.map(async (r) => {
+            const url = r.tjDownloadURL || r.gjDownloadURL;
+            try {
+              const head = await fetch(url, { method: 'HEAD', redirect: 'follow' });
+              const length = Number(head.headers.get('content-length')) || null;
+              return {
+                iso3: iso3Of(r),
+                name: r.boundaryName || r.boundaryISO || 'Unknown',
+                format: r.tjDownloadURL ? 'TopoJSON' : 'GeoJSON',
+                url,
+                bytes: length,
+                status: head.status,
+                license: r.license || r.boundaryLicense || 'Check source metadata'
+              };
+            } catch (error) {
+              return {
+                iso3: iso3Of(r),
+                name: r.boundaryName || r.boundaryISO || 'Unknown',
+                format: r.tjDownloadURL ? 'TopoJSON' : 'GeoJSON',
+                url,
+                bytes: null,
+                status: 'HEAD_FAILED',
+                error: String(error)
+              };
+            }
+          }));
+
+          results.sort((a, b) => a.iso3.localeCompare(b.iso3));
+          const known = results.filter((r) => r.bytes !== null);
+          const total = known.reduce((sum, r) => sum + r.bytes, 0);
+          const report = {
+            generatedAt: new Date().toISOString(),
+            source: 'geoBoundaries gbOpen ADM1 country catalogue',
+            geometryPolicy: 'Country-level full-resolution source files; no global simplified composite',
+            countries: results.length,
+            measurableFiles: known.length,
+            failedHeadRequests: results.length - known.length,
+            totalKnownBytes: total,
+            totalKnownMiB: Number((total / 1024 / 1024).toFixed(2)),
+            largest: [...known].sort((a, b) => b.bytes - a.bytes).slice(0, 15),
+            countriesByIso3: results
+          };
+
+          fs.writeFileSync('atlas-audit/report.json', JSON.stringify(report, null, 2));
+          const lines = [
+            '# Atlas ADM1 full-resolution data audit',
+            '',
+            `Generated: ${report.generatedAt}`,
+            '',
+            `- Country datasets: ${report.countries}`,
+            `- Files with measurable size: ${report.measurableFiles}`,
+            `- Failed size checks: ${report.failedHeadRequests}`,
+            `- Known aggregate size: ${report.totalKnownMiB} MiB`,
+            '',
+            '## Largest country files',
+            '',
+            '| ISO3 | Country | Format | Size (MiB) |',
+            '|---|---|---|---:|',
+            ...report.largest.map((r) => `| ${r.iso3} | ${r.name} | ${r.format} | ${(r.bytes / 1024 / 1024).toFixed(2)} |`),
+            '',
+            'Full country list and URLs are in report.json.',
+            ''
+          ];
+          fs.writeFileSync('atlas-audit/REPORT.md', lines.join('\n'));
+          console.log(lines.join('\n'));
+          if (report.failedHeadRequests) {
+            console.warn(`Warning: ${report.failedHeadRequests} source URLs did not return measurable HEAD responses.`);
+          }
+          NODE
+      - name: Upload audit report
+        uses: actions/upload-artifact@v4
+        with:
+          name: atlas-adm1-audit
+          path: atlas-audit/
+          retention-days: 30
