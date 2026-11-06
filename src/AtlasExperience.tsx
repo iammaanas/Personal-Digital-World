@@ -149,9 +149,9 @@ export default function AtlasExperience({ onExit, theme, onToggleTheme }: { onEx
       .translate(W / 2 - point[0] * scale, H / 2 - point[1] * scale)
       .scale(scale);
     if (animationFrameRef.current !== null) window.cancelAnimationFrame(animationFrameRef.current);
-    const startTransform = select(svg).property("__zoom") as ZoomTransform ?? transform;
+    const startTransform = (select(svg).property("__zoom") as ZoomTransform | undefined) ?? transform;
     const start = performance.now();
-    const duration = prefersReducedMotion.current ? 0 : 520;
+    const duration = prefersReducedMotion.current ? 1 : 520;
     const selection = select(svg);
     const animate = (now: number) => {
       const progress = Math.min(1, (now - start) / duration);
