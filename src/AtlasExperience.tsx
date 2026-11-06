@@ -61,6 +61,11 @@ export default function AtlasExperience({ onExit, theme, onToggleTheme }: { onEx
   const [introVisible, setIntroVisible] = useState(true);
   const [introLeaving, setIntroLeaving] = useState(false);
   const introTimer = useRef<number | null>(null);
+  const introRef = useRef<HTMLDivElement | null>(null);
+  const enterButtonRef = useRef<HTMLButtonElement | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const prefersReducedMotion = useRef(false);
   const [transform, setTransform] = useState<ZoomTransform>(zoomIdentity);
   const visiblePlaces = useMemo(() => places.filter(place => transform.k >= (place.minZoom ?? 1)), [transform.k]);
   const headingOpacity = Math.max(0, Math.min(1, 1 - (transform.k - 1) / 0.72));
@@ -95,17 +100,30 @@ export default function AtlasExperience({ onExit, theme, onToggleTheme }: { onEx
 
   useEffect(() => {
     const previousOverflow = document.body.style.overflow;
+    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    prefersReducedMotion.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     document.body.style.overflow = "hidden";
+    const focusIntro = window.requestAnimationFrame(() => enterButtonRef.current?.focus());
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onExit();
+      if (event.key === "Escape") { event.preventDefault(); onExit(); return; }
+      if (event.key !== "Tab" || !introVisible || !introRef.current) return;
+      const focusable = Array.from(introRef.current.querySelectorAll<HTMLElement>('button:not([disabled]),a[href],[tabindex]:not([tabindex="-1"])'));
+      if (!focusable.length) return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus(); }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus(); }
     };
     window.addEventListener("keydown", onKeyDown);
     return () => {
       document.body.style.overflow = previousOverflow;
+      window.cancelAnimationFrame(focusIntro);
       window.removeEventListener("keydown", onKeyDown);
+      if (animationFrameRef.current !== null) window.cancelAnimationFrame(animationFrameRef.current);
       if (introTimer.current !== null) window.clearTimeout(introTimer.current);
+      previousFocusRef.current?.focus();
     };
-  }, [onExit]);
+  }, [onExit, introVisible]);
 
   const closeIntro = useCallback(() => {
     if (introTimer.current !== null) window.clearTimeout(introTimer.current);
@@ -130,9 +148,10 @@ export default function AtlasExperience({ onExit, theme, onToggleTheme }: { onEx
     const next = zoomIdentity
       .translate(W / 2 - point[0] * scale, H / 2 - point[1] * scale)
       .scale(scale);
-    const startTransform = transform;
+    if (animationFrameRef.current !== null) window.cancelAnimationFrame(animationFrameRef.current);
+    const startTransform = select(svg).property("__zoom") as ZoomTransform ?? transform;
     const start = performance.now();
-    const duration = 520;
+    const duration = prefersReducedMotion.current ? 0 : 520;
     const selection = select(svg);
     const animate = (now: number) => {
       const progress = Math.min(1, (now - start) / duration);
@@ -143,9 +162,10 @@ export default function AtlasExperience({ onExit, theme, onToggleTheme }: { onEx
           startTransform.y + (next.y - startTransform.y) * eased,
         )
         .scale(startTransform.k + (next.k - startTransform.k) * eased));
-      if (progress < 1) window.requestAnimationFrame(animate);
+      if (progress < 1) animationFrameRef.current = window.requestAnimationFrame(animate);
+      else animationFrameRef.current = null;
     };
-    window.requestAnimationFrame(animate);
+    animationFrameRef.current = window.requestAnimationFrame(animate);
   }, [projection, transform]);
 
   const zoomBy = useCallback((amount: number) => {
@@ -173,7 +193,7 @@ export default function AtlasExperience({ onExit, theme, onToggleTheme }: { onEx
             <p className="atlas-map-subtitle">A world of places, moments, and meaning.</p>
           </div>
 
-          <svg ref={svgRef} className="atlas-world-svg" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Interactive world map. Drag to pan, use controls to zoom, and select a marker.">
+          <svg ref={svgRef} className="atlas-world-svg" viewBox={`0 0 ${W} ${H}`} role="group" aria-label="Interactive world map. Drag to pan, use controls to zoom, and select a marker.">
             <defs>
               <pattern id="atlas-grid" width="60" height="60" patternUnits="userSpaceOnUse">
                 <path d="M60 0 L0 0 0 60" fill="none" stroke="currentColor" strokeWidth=".55" opacity=".16" />
@@ -256,13 +276,13 @@ export default function AtlasExperience({ onExit, theme, onToggleTheme }: { onEx
         </footer>
 
         {introVisible && (
-          <div className={`atlas-intro-overlay ${introLeaving ? "is-leaving" : ""}`}>
+          <div ref={introRef} className={`atlas-intro-overlay ${introLeaving ? "is-leaving" : ""}`} role="dialog" aria-modal="true" aria-labelledby="atlas-intro-heading" aria-describedby="atlas-intro-description">
             <div className="atlas-intro-content">
               <div className="atlas-intro-orbit"><span /><i /><b /></div>
               <p className="atlas-intro-kicker">A SPACE WITHIN YOUR DIGITAL WORLD</p>
-              <p className="atlas-intro-title">The world is<br /><em>not that far.</em></p>
-              <p className="atlas-intro-copy">A map to begin with. A world to make your own.</p>
-              <button className="atlas-enter-button" onClick={closeIntro}>ENTER THE ATLAS <span>↗</span></button>
+              <h1 id="atlas-intro-heading" className="atlas-intro-title">The world is<br /><em>not that far.</em></h1>
+              <p id="atlas-intro-description" className="atlas-intro-copy">A map to begin with. A world to make your own.</p>
+              <button ref={enterButtonRef} className="atlas-enter-button" onClick={closeIntro}>ENTER THE ATLAS <span>↗</span></button>
             </div>
             <span className="atlas-intro-index">PDW — ATLAS / 001</span>
             <span className="atlas-intro-corner">INTERACTIVE ATLAS / FIRST STUDY</span>
