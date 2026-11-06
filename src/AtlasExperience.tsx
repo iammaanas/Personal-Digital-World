@@ -5,6 +5,7 @@ import { select } from "d3-selection";
 import { feature, mesh } from "topojson-client";
 import worldData from "world-atlas/countries-110m.json";
 import indiaStatesData from "./data/india-states.json";
+import japanPrefecturesData from "./data/boundaries/JPN.topojson";
 import "./AtlasExperience.css";
 
 type Place = {
@@ -54,6 +55,13 @@ const indiaObject = (indiaStatesData as unknown as IndiaTopology).objects.india;
 const indiaInternalBoundaries = mesh(
   indiaStatesData as never,
   indiaObject as never,
+  (a, b) => a !== b,
+);
+
+const japanObject = (japanPrefecturesData as unknown as { objects: { JPN: never } }).objects.JPN;
+const japanInternalBoundaries = mesh(
+  japanPrefecturesData as never,
+  japanObject as never,
   (a, b) => a !== b,
 );
 
@@ -193,9 +201,12 @@ export default function AtlasExperience({ onExit, theme, onToggleTheme }: { onEx
               <g className="atlas-countries">
                 {world.features.map((country, index) => <path key={index} d={path(country as never) ?? ""} className="atlas-country-shape" />)}
               </g>
-              <g className={`atlas-admin-boundaries ${transform.k >= 2.15 ? "is-visible" : ""}`} aria-label="India state boundaries">
+              <g className={`atlas-admin-boundaries ${transform.k >= 2.15 ? "is-visible" : ""}`} aria-label="Country administrative boundaries">
                 {transform.k >= 2.15 && (
-                  <path d={path(indiaInternalBoundaries as never) ?? ""} className="atlas-admin-boundary" />
+                  <>
+                    <path d={path(indiaInternalBoundaries as never) ?? ""} className="atlas-admin-boundary" aria-label="India state boundaries" />
+                    <path d={path(japanInternalBoundaries as never) ?? ""} className="atlas-admin-boundary" aria-label="Japan prefecture boundaries" />
+                  </>
                 )}
               </g>
               <g className="atlas-graticule">
