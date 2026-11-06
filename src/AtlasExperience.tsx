@@ -103,7 +103,9 @@ export default function AtlasExperience({ onExit, theme, onToggleTheme }: { onEx
     previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     prefersReducedMotion.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     document.body.style.overflow = "hidden";
-    const focusIntro = window.requestAnimationFrame(() => enterButtonRef.current?.focus());
+    const focusIntro = window.requestAnimationFrame(() => {
+      if (introVisible) enterButtonRef.current?.focus();
+    });
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") { event.preventDefault(); onExit(); return; }
       if (event.key !== "Tab" || !introVisible || !introRef.current) return;
