@@ -1,4 +1,5 @@
 import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+import "./styles.css";
 
 const AtlasExperience = lazy(() => import("./AtlasExperience"));
 
@@ -9,7 +10,6 @@ function getInitialTheme(): "dark" | "light" {
   } catch { /* Storage may be unavailable; fall back to the system preference. */ }
   return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
 }
-import "./styles.css";
 
 type Project = {
   number: string;
