@@ -3,6 +3,18 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script>
+      (() => {
+        try {
+          const saved = localStorage.getItem("pdw-theme");
+          const theme = saved === "dark" || saved === "light"
+            ? saved
+            : (matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark");
+          document.documentElement.dataset.theme = theme;
+          document.documentElement.style.colorScheme = theme;
+        } catch { /* React applies the system default after startup. */ }
+      })();
+    </script>
     <meta name="theme-color" content="#0c1011" />
     <meta name="description" content="Personal Digital World — a place for projects, ideas, places, and everything worth keeping." />
     <title>Personal Digital World — A place for everything that makes you, you.</title>
