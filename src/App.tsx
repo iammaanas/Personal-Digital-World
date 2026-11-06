@@ -1,5 +1,14 @@
-import { useEffect, useState } from "react";
-import AtlasExperience from "./AtlasExperience";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
+
+const AtlasExperience = lazy(() => import("./AtlasExperience"));
+
+function getInitialTheme(): "dark" | "light" {
+  try {
+    const saved = window.localStorage.getItem("pdw-theme");
+    if (saved === "dark" || saved === "light") return saved;
+  } catch { /* Storage may be unavailable; fall back to the system preference. */ }
+  return window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+}
 import "./styles.css";
 
 type Project = {
@@ -56,8 +65,9 @@ function ArrowIcon() {
 function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [activeSection, setActiveSection] = useState("home");
-  const [theme, setTheme] = useState<"dark" | "light">("dark");
+  const [theme, setTheme] = useState<"dark" | "light">(getInitialTheme);
   const [atlasOpen, setAtlasOpen] = useState(false);
+  const atlasLaunchRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const sections = ["home", "about", "workshop", "mind", "atlas", "archives"];
@@ -79,12 +89,20 @@ function App() {
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
+    document.documentElement.style.colorScheme = theme;
+    try { window.localStorage.setItem("pdw-theme", theme); } catch { /* Keep theme usable when storage is unavailable. */ }
   }, [theme]);
 
-  const openAtlas = () => {
+  const openAtlas = (event?: React.MouseEvent<HTMLElement>) => {
     setMenuOpen(false);
+    atlasLaunchRef.current = event?.currentTarget ?? document.activeElement as HTMLElement;
     setAtlasOpen(true);
   };
+
+  const closeAtlas = useCallback(() => {
+    setAtlasOpen(false);
+    window.requestAnimationFrame(() => atlasLaunchRef.current?.focus());
+  }, []);
 
   const scrollTo = (id: string) => {
     setMenuOpen(false);
@@ -99,14 +117,14 @@ function App() {
           <span className="wordmark-glyph">P<span>·</span>DW</span>
           <span className="wordmark-caption">PERSONAL DIGITAL WORLD</span>
         </a>
-        <nav className={menuOpen ? "main-nav open" : "main-nav"} aria-label="Main navigation">
+        <nav id="primary-navigation" className={menuOpen ? "main-nav open" : "main-nav"} aria-label="Main navigation">
           {[["about", "About"], ["workshop", "Workshop"], ["mind", "Mind"], ["atlas", "Atlas"], ["archives", "Archives"]].map(([id, label]) => (
-            <a key={id} href={`#${id}`} className={activeSection === id ? "active" : ""} onClick={event => { event.preventDefault(); id === "atlas" ? openAtlas() : scrollTo(id); }}>{label}</a>
+            <a key={id} href={`#${id}`} className={activeSection === id ? "active" : ""} onClick={event => { event.preventDefault(); id === "atlas" ? openAtlas(event) : scrollTo(id); }}>{label}</a>
           ))}
         </nav>
         <div className="header-actions">
           <button className="theme-toggle" onClick={() => setTheme(current => current === "dark" ? "light" : "dark")} aria-label={theme === "dark" ? "Switch to light theme" : "Switch to dark theme"} title="Toggle theme">{theme === "dark" ? "☼" : "◐"}</button>
-          <button className="menu-toggle" onClick={() => setMenuOpen(current => !current)} aria-label={menuOpen ? "Close navigation" : "Open navigation"} aria-expanded={menuOpen}>{menuOpen ? "×" : "☰"}</button>
+          <button className="menu-toggle" onClick={() => setMenuOpen(current => !current)} aria-label={menuOpen ? "Close navigation" : "Open navigation"} aria-expanded={menuOpen} aria-controls="primary-navigation">{menuOpen ? "×" : "☰"}</button>
         </div>
       </header>
 
@@ -155,7 +173,7 @@ function App() {
           <div className="section-heading-row"><h2>Choose your<br /><em>own rabbit hole.</em></h2><p>Different corners of the same mind.<br />Each one can grow at its own pace.</p></div>
           <div className="destination-grid">
             {destinations.map((item, index) => (
-              <button key={item.id} className={`destination-card ${item.tone}`} onClick={() => item.id === "atlas" ? openAtlas() : scrollTo(item.id)}>
+              <button key={item.id} className={`destination-card ${item.tone}`} onClick={event => item.id === "atlas" ? openAtlas(event) : scrollTo(item.id)}>
                 <div className="destination-top"><span>{item.number} / 04</span><span className="destination-symbol">{item.symbol}</span></div>
                 <div className="destination-art" aria-hidden="true"><span className="destination-art-ring ring-a" /><span className="destination-art-ring ring-b" /><span className="destination-art-shape">{index === 0 ? "✳" : index === 1 ? "◌" : index === 2 ? "⌖" : "▤"}</span></div>
                 <div className="destination-bottom"><span className="eyebrow">{item.kicker}</span><h3>{item.title}</h3><p>{item.text}</p><span className="card-link">EXPLORE SECTION <ArrowIcon /></span></div>
@@ -193,8 +211,8 @@ function App() {
         <section className="atlas-section section-wrap" id="atlas">
           <div className="section-index"><span>05 / THE ATLAS</span><span>THE WORLD OUT THERE</span></div>
           <div className="atlas-layout">
-            <div className="atlas-copy"><p className="eyebrow">PLACES ARE STORIES, TOO</p><h2>Somewhere<br /><em>out there.</em></h2><p>Travel plans, places on the list, field notes, and maps worth opening. The Atlas brings geography into the world without making the whole website about travel.</p><button type="button" onClick={openAtlas} className="inline-link">OPEN THE ATLAS <ArrowIcon /></button></div>
-            <button type="button" className="atlas-art atlas-art-launch" onClick={openAtlas} aria-label="Open the interactive Atlas"><span className="atlas-launch-cue">EXPLORE THE MAP <ArrowIcon /></span><div className="map-grid" /><svg viewBox="0 0 600 460" aria-hidden="true"><path d="M70 80 L150 60 L210 100 L195 150 L140 170 L120 225 L70 185 Z" /><path d="M215 190 L260 165 L305 205 L290 270 L250 325 L230 270 Z" /><path d="M320 75 L390 60 L430 100 L485 90 L530 145 L490 195 L440 170 L400 215 L365 170 Z" /><path d="M415 235 L470 220 L515 275 L485 345 L445 370 L415 315 Z" /><path d="M120 300 L160 285 L190 315 L170 350 L120 340 Z" /></svg><div className="map-pin pin-one">THANE <i /></div><div className="map-pin pin-two">SOMEWHERE NEXT <i /></div><span className="atlas-coordinate">19° 11' N / 72° 58' E</span><span className="atlas-note">GO A LITTLE FURTHER.</span></button>
+            <div className="atlas-copy"><p className="eyebrow">PLACES ARE STORIES, TOO</p><h2>Somewhere<br /><em>out there.</em></h2><p>Travel plans, places on the list, field notes, and maps worth opening. The Atlas brings geography into the world without making the whole website about travel.</p><button type="button" onClick={event => openAtlas(event)} className="inline-link">OPEN THE ATLAS <ArrowIcon /></button></div>
+            <button type="button" className="atlas-art atlas-art-launch" onClick={event => openAtlas(event)} aria-label="Open the interactive Atlas"><span className="atlas-launch-cue">EXPLORE THE MAP <ArrowIcon /></span><div className="map-grid" /><svg viewBox="0 0 600 460" aria-hidden="true"><path d="M70 80 L150 60 L210 100 L195 150 L140 170 L120 225 L70 185 Z" /><path d="M215 190 L260 165 L305 205 L290 270 L250 325 L230 270 Z" /><path d="M320 75 L390 60 L430 100 L485 90 L530 145 L490 195 L440 170 L400 215 L365 170 Z" /><path d="M415 235 L470 220 L515 275 L485 345 L445 370 L415 315 Z" /><path d="M120 300 L160 285 L190 315 L170 350 L120 340 Z" /></svg><div className="map-pin pin-one">THANE <i /></div><div className="map-pin pin-two">SOMEWHERE NEXT <i /></div><span className="atlas-coordinate">19° 11' N / 72° 58' E</span><span className="atlas-note">GO A LITTLE FURTHER.</span></button>
           </div>
         </section>
 
@@ -208,7 +226,7 @@ function App() {
         </section>
       </main>
 
-      {atlasOpen && <AtlasExperience onExit={() => setAtlasOpen(false)} theme={theme} onToggleTheme={() => setTheme(current => current === "dark" ? "light" : "dark")} />}
+      {atlasOpen && <Suspense fallback={<div className="atlas-loading" role="status">OPENING THE ATLAS…</div>}><AtlasExperience onExit={closeAtlas} theme={theme} onToggleTheme={() => setTheme(current => current === "dark" ? "light" : "dark")} /></Suspense>}
 
       <footer className="site-footer"><a className="footer-mark" href="#home" onClick={event => { event.preventDefault(); scrollTo("home"); }}>P<span>·</span>DW</a><span>PERSONAL DIGITAL WORLD · A LIVING WORK IN PROGRESS</span><a href="https://github.com/iammaanas/Personal-Digital-World" target="_blank" rel="noreferrer">SOURCE CODE <ArrowIcon /></a></footer>
     </div>
