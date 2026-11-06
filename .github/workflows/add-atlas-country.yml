@@ -1,0 +1,35 @@
+name: Add one Atlas country boundary
+
+on:
+  workflow_dispatch:
+    inputs:
+      iso3:
+        description: "ISO 3166-1 alpha-3 country code (e.g. JPN, DEU, USA)"
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  add-country:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install dependencies
+        run: npm install
+      - name: Add one full-resolution ADM1 country
+        run: node scripts/add-atlas-country.mjs "${{ inputs.iso3 }}"
+      - name: Commit generated country geometry
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "src/data/boundaries/${{ inputs.iso3 }}.topojson" "src/data/boundaries/${{ inputs.iso3 }}.meta.json"
+          git diff --cached --quiet && { echo "No changes to commit"; exit 0; }
+          git commit -m "Add ${{ inputs.iso3 }} ADM1 boundaries"
+          git push origin HEAD:main
