@@ -128,7 +128,7 @@ export default function AtlasExperience({ onExit, theme, onToggleTheme }: { onEx
   const closeIntro = useCallback(() => {
     if (introTimer.current !== null) window.clearTimeout(introTimer.current);
     setIntroLeaving(true);
-    introTimer.current = window.setTimeout(() => setIntroVisible(false), 420);
+    introTimer.current = window.setTimeout(() => setIntroVisible(false), prefersReducedMotion.current ? 0 : 420);
   }, []);
 
   const reset = useCallback(() => {
